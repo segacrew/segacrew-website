@@ -4,8 +4,18 @@ document.addEventListener("DOMContentLoaded", () => {
   if (!controls || !content) return;
 
   let allRows = [];
+  let socialsRows = [];
 
   const CSV_URL = "https://stupendous-paletas-199024.netlify.app/sega crew database - master sheet.csv";
+  const SOCIALS_CSV_URL = "https://stupendous-paletas-199024.netlify.app/SEGA CREW MEMBER LINKS - SHEET 1.csv";
+
+  const ICONS = {
+    twitch: "images/twitch.png",
+    youtube: "images/youtube.png",
+    x: "images/x_logo.png",
+    bluesky: "images/bluesky.png",
+    src: "images/srclogo.png"
+  };
 
   const wrapper = document.createElement("div");
   wrapper.className = "sc-page-controls";
@@ -58,6 +68,10 @@ document.addEventListener("DOMContentLoaded", () => {
     return String(name || "").trim();
   }
 
+  function normalizeHandle(value) {
+    return String(value || "").trim().toLowerCase();
+  }
+
   function getUniqueMemberNames(rows) {
     const names = new Set();
 
@@ -83,7 +97,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function getTwitchProfileImage(login) {
     try {
-      const response = await fetch(`/api/twitch-user?login=${encodeURIComponent(login)}`);
+      const response = await fetch(`/.netlify/functions/twitch-user?login=${encodeURIComponent(login)}`);
       if (!response.ok) return "";
       const data = await response.json();
       return data.profile_image_url || "";
@@ -92,12 +106,116 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  function findSocialRowForMember(name) {
+    const target = normalizeHandle(name);
+    return socialsRows.find(row =>
+      normalizeHandle(row["TWITCH USERNAME"]) === target
+    ) || null;
+  }
+
+  function cleanBlueskyHandle(handle) {
+    return String(handle || "").trim().replace(/^@+/, "");
+  }
+
+  function createSocialLink(href, iconSrc, alt) {
+    const a = document.createElement("a");
+    a.href = href;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+
+    const img = document.createElement("img");
+    img.src = iconSrc;
+    img.alt = alt;
+
+    a.appendChild(img);
+    return a;
+  }
+
+  function buildSocialLinks(name, socialRow) {
+    const socialWrap = document.createElement("div");
+    socialWrap.className = "sc-member-social";
+
+    socialWrap.appendChild(
+      createSocialLink(
+        `https://twitch.tv/${encodeURIComponent(name)}`,
+        ICONS.twitch,
+        "Twitch"
+      )
+    );
+
+    if (!socialRow) {
+      return socialWrap;
+    }
+
+    const youtube = normalizeName(socialRow["YOUTUBE"]);
+    const x = normalizeName(socialRow["X (TWITTER)"]);
+    const bluesky = cleanBlueskyHandle(socialRow["BLUESKY"]);
+    const srcProfile = normalizeName(socialRow["SRC PROFILE"]);
+
+    if (youtube) {
+      socialWrap.appendChild(
+        createSocialLink(
+          `https://youtube.com/${encodeURIComponent(youtube)}`,
+          ICONS.youtube,
+          "YouTube"
+        )
+      );
+    }
+
+    if (x) {
+      socialWrap.appendChild(
+        createSocialLink(
+          `https://x.com/${encodeURIComponent(x)}`,
+          ICONS.x,
+          "X"
+        )
+      );
+    }
+
+    if (bluesky) {
+      socialWrap.appendChild(
+        createSocialLink(
+          `https://bsky.app/profile/${encodeURIComponent(bluesky)}`,
+          ICONS.bluesky,
+          "Bluesky"
+        )
+      );
+    }
+
+    if (srcProfile) {
+      socialWrap.appendChild(
+        createSocialLink(
+          `https://speedrun.com/users/${encodeURIComponent(srcProfile)}`,
+          ICONS.src,
+          "Speedrun.com"
+        )
+      );
+    }
+
+    return socialWrap;
+  }
+
+  function buildPersonalWebsite(socialRow) {
+    if (!socialRow) return null;
+
+    const website = normalizeName(socialRow["PERSONAL WEBSITE"]);
+    if (!website) return null;
+
+    const p = document.createElement("p");
+    p.className = "sc-member-website";
+
+    const safeUrl = /^https?:\/\//i.test(website) ? website : `https://${website}`;
+
+    p.innerHTML = `Personal Website: <a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(website)}</a>`;
+    return p;
+  }
+
   async function renderMember(name) {
     content.innerHTML = "";
 
-    if (!name) {
-      return;
-    }
+    if (!name) return;
+
+    const socialRow = findSocialRowForMember(name);
 
     const wrap = document.createElement("div");
     wrap.className = "sc-member-wrap";
@@ -111,12 +229,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const info = document.createElement("div");
     info.className = "sc-member-info";
-    info.innerHTML = `
-      <h3 class="sc-member-name">${escapeHtml(name)}</h3>
-      <a class="sc-member-link" href="https://twitch.tv/${encodeURIComponent(name)}" target="_blank" rel="noopener noreferrer">
-        https://twitch.tv/${escapeHtml(name)}
-      </a>
-    `;
+
+    const nameEl = document.createElement("h3");
+    nameEl.className = "sc-member-name";
+    nameEl.textContent = name;
+
+    info.appendChild(nameEl);
+    info.appendChild(buildSocialLinks(name, socialRow));
+
+    const websiteEl = buildPersonalWebsite(socialRow);
+    if (websiteEl) {
+      info.appendChild(websiteEl);
+    }
 
     card.appendChild(photoWrap);
     card.appendChild(info);
@@ -131,9 +255,6 @@ document.addEventListener("DOMContentLoaded", () => {
       img.alt = `${name} Twitch profile picture`;
       photoWrap.innerHTML = "";
       photoWrap.appendChild(img);
-
-      const note = info.querySelector(".sc-member-note");
-      if (note) note.remove();
     }
   }
 
@@ -142,6 +263,36 @@ document.addEventListener("DOMContentLoaded", () => {
     trigger.dataset.value = name || "";
     closeMenu();
     renderMember(name);
+  }
+
+  function handleMembersLoaded() {
+    const uniqueMembers = getUniqueMemberNames(allRows);
+
+    menu.innerHTML = "";
+    trigger.textContent = "Select a member";
+
+    if (!uniqueMembers.length) {
+      trigger.textContent = "No members found";
+      content.innerHTML = `<p class="sc-results-message">No members were found in the CSV.</p>`;
+      return;
+    }
+
+    const defaultItem = document.createElement("button");
+    defaultItem.type = "button";
+    defaultItem.className = "sc-dropdown-item";
+    defaultItem.textContent = "Select a member";
+    defaultItem.addEventListener("click", () => setSelected(""));
+    menu.appendChild(defaultItem);
+
+    uniqueMembers.forEach(name => {
+      const item = document.createElement("button");
+      item.type = "button";
+      item.className = "sc-dropdown-item";
+      item.textContent = name;
+      item.title = name;
+      item.addEventListener("click", () => setSelected(name));
+      menu.appendChild(item);
+    });
   }
 
   trigger.addEventListener("click", (e) => {
@@ -159,44 +310,45 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  Papa.parse(CSV_URL, {
+  Papa.parse(SOCIALS_CSV_URL, {
     download: true,
     header: true,
     skipEmptyLines: true,
     complete: function(results) {
-      allRows = results.data || [];
-      const uniqueMembers = getUniqueMemberNames(allRows);
+      socialsRows = results.data || [];
 
-      menu.innerHTML = "";
-      trigger.textContent = "Select a member";
-
-      if (!uniqueMembers.length) {
-        trigger.textContent = "No members found";
-        content.innerHTML = `<p class="sc-results-message">No members were found in the CSV.</p>`;
-        return;
-      }
-
-      const defaultItem = document.createElement("button");
-      defaultItem.type = "button";
-      defaultItem.className = "sc-dropdown-item";
-      defaultItem.textContent = "Select a member";
-      defaultItem.addEventListener("click", () => setSelected(""));
-      menu.appendChild(defaultItem);
-
-      uniqueMembers.forEach(name => {
-        const item = document.createElement("button");
-        item.type = "button";
-        item.className = "sc-dropdown-item";
-        item.textContent = name;
-        item.title = name;
-        item.addEventListener("click", () => setSelected(name));
-        menu.appendChild(item);
+      Papa.parse(CSV_URL, {
+        download: true,
+        header: true,
+        skipEmptyLines: true,
+        complete: function(memberResults) {
+          allRows = memberResults.data || [];
+          handleMembersLoaded();
+        },
+        error: function(err) {
+          console.error("Papa Parse member CSV error:", err);
+          trigger.textContent = "Failed to load members";
+          content.innerHTML = `<p class="sc-results-message">Could not load member CSV data.</p>`;
+        }
       });
     },
     error: function(err) {
-      console.error("Papa Parse load error:", err);
-      trigger.textContent = "Failed to load members";
-      content.innerHTML = `<p class="sc-results-message">Could not load CSV data.</p>`;
+      console.error("Papa Parse socials CSV error:", err);
+
+      Papa.parse(CSV_URL, {
+        download: true,
+        header: true,
+        skipEmptyLines: true,
+        complete: function(memberResults) {
+          allRows = memberResults.data || [];
+          handleMembersLoaded();
+        },
+        error: function(memberErr) {
+          console.error("Papa Parse member CSV error:", memberErr);
+          trigger.textContent = "Failed to load members";
+          content.innerHTML = `<p class="sc-results-message">Could not load member CSV data.</p>`;
+        }
+      });
     }
   });
 });
