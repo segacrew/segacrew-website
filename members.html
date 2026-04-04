@@ -1,0 +1,206 @@
+document.addEventListener("DOMContentLoaded", () => {
+  const controls = document.getElementById("controls");
+  const content = document.getElementById("member-directory-content");
+  if (!controls || !content) return;
+
+  let allRows = [];
+
+  const CSV_URL = "https://stupendous-paletas-199024.netlify.app/sega crew database - master sheet.csv";
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "sc-page-controls";
+
+  const label = document.createElement("div");
+  label.className = "sc-label";
+  label.textContent = "Select Member";
+
+  const dropdown = document.createElement("div");
+  dropdown.className = "sc-dropdown";
+  dropdown.id = "memberDropdown";
+
+  const trigger = document.createElement("button");
+  trigger.type = "button";
+  trigger.className = "sc-dropdown-trigger";
+  trigger.setAttribute("aria-haspopup", "listbox");
+  trigger.setAttribute("aria-expanded", "false");
+  trigger.textContent = "Loading members...";
+
+  const menu = document.createElement("div");
+  menu.className = "sc-dropdown-menu";
+  menu.setAttribute("role", "listbox");
+
+  dropdown.appendChild(trigger);
+  dropdown.appendChild(menu);
+  wrapper.appendChild(label);
+  wrapper.appendChild(dropdown);
+  controls.appendChild(wrapper);
+
+  function closeMenu() {
+    dropdown.classList.remove("open");
+    trigger.setAttribute("aria-expanded", "false");
+  }
+
+  function openMenu() {
+    dropdown.classList.add("open");
+    trigger.setAttribute("aria-expanded", "true");
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;");
+  }
+
+  function normalizeName(name) {
+    return String(name || "").trim();
+  }
+
+  function getUniqueMemberNames(rows) {
+    const names = new Set();
+
+    rows.forEach(row => {
+      for (let i = 1; i <= 16; i++) {
+        const runner = normalizeName(row[`RUNNER${i}`]);
+        const commentary = normalizeName(row[`COMMENTARY${i}`]);
+
+        if (runner) names.add(runner);
+        if (commentary) names.add(commentary);
+      }
+    });
+
+    return [...names].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+  }
+
+  function makePlaceholder(name) {
+    const div = document.createElement("div");
+    div.className = "sc-member-photo-placeholder";
+    div.textContent = (name || "?").charAt(0).toUpperCase();
+    return div;
+  }
+
+  async function getTwitchProfileImage(login) {
+    // Recommended approach:
+    // Create your own tiny endpoint like /api/twitch-user?login=NAME
+    // That endpoint should call Twitch Helix Get Users and return profile_image_url.
+    try {
+      const response = await fetch(`/api/twitch-user?login=${encodeURIComponent(login)}`);
+      if (!response.ok) return "";
+      const data = await response.json();
+      return data.profile_image_url || "";
+    } catch {
+      return "";
+    }
+  }
+
+  async function renderMember(name) {
+    content.innerHTML = "";
+
+    if (!name) {
+      return;
+    }
+
+    const wrap = document.createElement("div");
+    wrap.className = "sc-member-wrap";
+
+    const card = document.createElement("div");
+    card.className = "sc-member-card";
+
+    const photoWrap = document.createElement("div");
+    photoWrap.className = "sc-member-photo-wrap";
+    photoWrap.appendChild(makePlaceholder(name));
+
+    const info = document.createElement("div");
+    info.className = "sc-member-info";
+    info.innerHTML = `
+      <h3 class="sc-member-name">${escapeHtml(name)}</h3>
+      <a class="sc-member-link" href="https://twitch.tv/${encodeURIComponent(name)}" target="_blank" rel="noopener noreferrer">
+        https://twitch.tv/${escapeHtml(name)}
+      </a>
+      <p class="sc-member-note">Twitch profile image will appear here automatically once a Twitch lookup endpoint is connected.</p>
+    `;
+
+    card.appendChild(photoWrap);
+    card.appendChild(info);
+    wrap.appendChild(card);
+    content.appendChild(wrap);
+
+    const profileImageUrl = await getTwitchProfileImage(name);
+    if (profileImageUrl) {
+      const img = document.createElement("img");
+      img.className = "sc-member-photo";
+      img.src = profileImageUrl;
+      img.alt = `${name} Twitch profile picture`;
+      photoWrap.innerHTML = "";
+      photoWrap.appendChild(img);
+
+      const note = info.querySelector(".sc-member-note");
+      if (note) note.remove();
+    }
+  }
+
+  function setSelected(name) {
+    trigger.textContent = name || "Select a member";
+    trigger.dataset.value = name || "";
+    closeMenu();
+    renderMember(name);
+  }
+
+  trigger.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (dropdown.classList.contains("open")) {
+      closeMenu();
+    } else {
+      openMenu();
+    }
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!dropdown.contains(e.target)) {
+      closeMenu();
+    }
+  });
+
+  Papa.parse(CSV_URL, {
+    download: true,
+    header: true,
+    skipEmptyLines: true,
+    complete: function(results) {
+      allRows = results.data || [];
+      const uniqueMembers = getUniqueMemberNames(allRows);
+
+      menu.innerHTML = "";
+      trigger.textContent = "Select a member";
+
+      if (!uniqueMembers.length) {
+        trigger.textContent = "No members found";
+        content.innerHTML = `<p class="sc-results-message">No members were found in the CSV.</p>`;
+        return;
+      }
+
+      const defaultItem = document.createElement("button");
+      defaultItem.type = "button";
+      defaultItem.className = "sc-dropdown-item";
+      defaultItem.textContent = "Select a member";
+      defaultItem.addEventListener("click", () => setSelected(""));
+      menu.appendChild(defaultItem);
+
+      uniqueMembers.forEach(name => {
+        const item = document.createElement("button");
+        item.type = "button";
+        item.className = "sc-dropdown-item";
+        item.textContent = name;
+        item.title = name;
+        item.addEventListener("click", () => setSelected(name));
+        menu.appendChild(item);
+      });
+    },
+    error: function(err) {
+      console.error("Papa Parse load error:", err);
+      trigger.textContent = "Failed to load members";
+      content.innerHTML = `<p class="sc-results-message">Could not load CSV data.</p>`;
+    }
+  });
+});

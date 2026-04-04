@@ -1,0 +1,468 @@
+<style>
+  :root{
+    --sega-blue:#17569b;
+    --sega-blue-dark:#083a8c;
+    --bg:#f5f8fc;
+    --card:#ffffff;
+    --text:#1c2430;
+    --muted:#5f6b7a;
+    --border:#dbe4f0;
+    --shadow:0 10px 30px rgba(0,0,0,0.10);
+    --radius:18px;
+    --max:1200px;
+  }
+
+  *{box-sizing:border-box;}
+
+  body{
+    margin:0;
+    font-family:Arial, Helvetica, sans-serif;
+    background:var(--bg);
+    color:var(--text);
+  }
+
+  .sc-header{
+    background:linear-gradient(135deg,var(--sega-blue),var(--sega-blue-dark));
+    color:#fff;
+    position:sticky;
+    top:0;
+    z-index:1000;
+    box-shadow:0 4px 18px rgba(0,0,0,0.15);
+  }
+
+  .sc-header-inner{
+    max-width:var(--max);
+    margin:0 auto;
+    padding:16px 24px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:24px;
+  }
+
+  .sc-brand{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    text-decoration:none;
+    color:#fff;
+    min-width:0;
+  }
+
+  .sc-logo{
+    height:52px;
+    width:auto;
+    display:block;
+    border-radius:10px;
+    background:rgba(255,255,255,0);
+    padding:4px;
+  }
+
+  .sc-title-wrap{
+    min-width:0;
+  }
+
+  .sc-site-title{
+    margin:0;
+    font-size:1.5rem;
+    line-height:1.1;
+    font-weight:800;
+    letter-spacing:0.4px;
+  }
+
+  .sc-site-tag{
+    margin:4px 0 0;
+    font-size:0.92rem;
+    color:rgba(255,255,255,0.85);
+  }
+
+  .sc-nav{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    justify-content:flex-end;
+  }
+
+  .sc-nav a{
+    color:#fff;
+    text-decoration:none;
+    padding:10px 14px;
+    border-radius:999px;
+    font-weight:700;
+    font-size:0.95rem;
+    transition:background 0.2s ease, transform 0.2s ease;
+  }
+
+  .sc-nav a:hover{
+    background:rgba(255,255,255,0.14);
+    transform:translateY(-1px);
+  }
+
+  .sc-hero{
+    position:relative;
+    width:100%;
+    overflow:hidden;
+    background:#000;
+  }
+
+  .sc-hero-video{
+    width:100%;
+    height:clamp(300px, 52vw, 620px);
+    object-fit:cover;
+    display:block;
+  }
+
+  .sc-hero-overlay{
+    position:absolute;
+    inset:0;
+    background:linear-gradient(to top, rgba(0,0,0,0.55), rgba(0,0,0,0.12));
+    display:flex;
+    align-items:flex-end;
+  }
+
+  .sc-hero-content{
+    max-width:var(--max);
+    width:100%;
+    margin:0 auto;
+    padding:34px 24px;
+    color:#fff;
+  }
+
+  .sc-hero-content h2{
+    margin:0 0 10px;
+    font-size:clamp(2rem, 4vw, 3.3rem);
+    line-height:1.05;
+    font-weight:900;
+    text-shadow:0 2px 16px rgba(0,0,0,0.35);
+  }
+
+  .sc-hero-content p{
+    margin:0;
+    max-width:720px;
+    font-size:1.05rem;
+    color:rgba(255,255,255,0.92);
+  }
+
+  .sc-main{
+    max-width:var(--max);
+    margin:-36px auto 0;
+    padding:0 24px 50px;
+    position:relative;
+    z-index:2;
+  }
+
+  .sc-card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:34px;
+  }
+
+  .sc-card h3{
+    margin:0 0 16px;
+    font-size:1.7rem;
+    color:var(--sega-blue-dark);
+  }
+
+  .sc-card p{
+    margin:0 0 18px;
+    line-height:1.7;
+    color:var(--text);
+    font-size:1rem;
+  }
+
+  .sc-meta{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:14px;
+    margin:22px 0 28px;
+  }
+
+  .sc-pill{
+    background:#eef4ff;
+    color:var(--sega-blue-dark);
+    border:1px solid #cfe0ff;
+    border-radius:999px;
+    padding:10px 14px;
+    font-size:0.95rem;
+    font-weight:700;
+    height:42px;
+    display:flex;
+    align-items:center;
+  }
+
+  .sc-social-icons{
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+
+  .sc-social-icons a{
+    display:flex;
+    align-items:center;
+  }
+
+  .sc-social-icons img{
+    height:42px;
+    width:auto;
+    display:block;
+    object-fit:contain;
+    transition:transform 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .sc-social-icons img:hover{
+    transform:translateY(-2px) scale(1.05);
+    opacity:0.9;
+    box-shadow:0 4px 12px rgba(0,0,0,0.25);
+  }
+
+  .sc-buttons{
+    display:flex;
+    flex-wrap:wrap;
+    gap:12px;
+    margin-top:10px;
+  }
+
+  .sc-btn{
+    display:inline-block;
+    text-decoration:none;
+    padding:12px 18px;
+    border-radius:12px;
+    font-weight:800;
+    transition:transform 0.2s ease, opacity 0.2s ease;
+  }
+
+  .sc-btn:hover{
+    transform:translateY(-1px);
+    opacity:0.95;
+  }
+
+  .sc-btn-primary{
+    background:var(--sega-blue);
+    color:#fff;
+  }
+
+  .sc-btn-secondary{
+    background:#111827;
+    color:#fff;
+  }
+
+  .sc-btn-outline{
+    background:#fff;
+    color:var(--sega-blue-dark);
+    border:1px solid var(--border);
+  }
+
+  .sc-social{
+    display:flex;
+    flex-wrap:wrap;
+    gap:12px;
+    margin-top:26px;
+  }
+
+  .sc-social a{
+    text-decoration:none;
+    color:var(--muted);
+    font-weight:700;
+  }
+
+  .sc-social a:hover{
+    color:var(--sega-blue);
+  }
+
+  .sc-twitch{
+    margin-top:24px;
+    border-radius:var(--radius);
+    overflow:hidden;
+    box-shadow:var(--shadow);
+  }
+
+  @media (max-width: 900px){
+    .sc-header-inner{
+      flex-direction:column;
+      align-items:flex-start;
+      padding:14px 16px;
+      gap:14px;
+    }
+
+    .sc-brand{
+      width:100%;
+    }
+
+    .sc-logo{
+      height:44px;
+    }
+
+    .sc-site-title{
+      font-size:1.25rem;
+    }
+
+    .sc-site-tag{
+      font-size:0.85rem;
+    }
+
+    .sc-nav{
+      justify-content:flex-start;
+      width:100%;
+      gap:8px;
+    }
+
+    .sc-nav a{
+      padding:8px 12px;
+      font-size:0.9rem;
+    }
+
+    .sc-hero-video{
+      height:220px;
+    }
+
+    .sc-hero-content{
+      padding:20px 16px;
+    }
+
+    .sc-hero-content h2{
+      font-size:1.8rem;
+      margin:0 0 6px;
+    }
+
+    .sc-main{
+      margin:-20px auto 0;
+      padding:0 16px 40px;
+    }
+
+    .sc-card{
+      padding:22px 18px;
+    }
+
+    .sc-card h3{
+      font-size:1.4rem;
+    }
+
+    .sc-card p{
+      font-size:0.95rem;
+      line-height:1.6;
+    }
+
+    .sc-buttons{
+      flex-direction:column;
+      gap:10px;
+    }
+
+    .sc-btn{
+      width:100%;
+      text-align:center;
+    }
+
+    .sc-meta{
+      flex-direction:column;
+      align-items:flex-start;
+    }
+
+    .sc-pill{
+      width:100%;
+      height:auto;
+      min-height:42px;
+    }
+
+    .sc-social-icons{
+      flex-wrap:wrap;
+      gap:8px;
+    }
+
+    .sc-social-icons img{
+      height:36px;
+    }
+
+    .sc-twitch iframe{
+      height:220px;
+    }
+  }
+</style>
+
+<header class="sc-header">
+  <div class="sc-header-inner">
+    <a href="/" class="sc-brand">
+      <img class="sc-logo" src="segacrew_logo.png" alt="Sega Crew logo">
+      <div class="sc-title-wrap">
+        <h1 class="sc-site-title">Sega Crew</h1>
+        <p class="sc-site-tag">Events • Archive • Speedruns • Community</p>
+      </div>
+    </a>
+
+    <nav class="sc-nav">
+      <a href="/event-archive.html">Event Archive</a>
+      <a href="/member-directory.html">Member Directory</a>
+      <a href="/game-directory.html">Game Directory</a>
+      <a href="/sega-crew-stats.html">Sega Crew Stats</a>
+    </nav>
+  </div>
+</header>
+
+<section class="sc-hero">
+  <video class="sc-hero-video" autoplay muted loop playsinline>
+    <source src="bannervid_zoom.mov" type="video/mp4">
+  </video>
+  <div class="sc-hero-overlay">
+    <div class="sc-hero-content">
+      <h2>Welcome to the Sega Crew</h2>
+      <p></p>
+    </div>
+  </div>
+</section>
+
+<main class="sc-main">
+  <section class="sc-card">
+    <h3>Home of all things SEGA</h3>
+
+    <p>
+      Welcome to the home of the Sega Crew. Here you can find out about our upcoming events, find links to our Discord channel and other social media, as well as view the extensive archives of the Sega Crew past events
+    </p>
+    
+    <div class="sc-buttons">
+      <a class="sc-btn sc-btn-primary" href="https://discord.gg/QN6HvDZ" target="_blank" rel="noopener noreferrer">JOIN the Sega Crew</a>
+      <a class="sc-btn sc-btn-secondary" href="/member-directory.html">Sega Crew Members</a>
+      <a class="sc-btn sc-btn-outline" href="/sega-crew-gdq">Sega Crew at GDQ</a>
+    </div>
+
+    <div class="sc-meta">
+      <div class="sc-pill">
+        Upcoming Event: MASTER 8 Race (April 11 2026)
+      </div>
+
+      <div class="sc-social-icons">
+        <a href="https://twitch.tv/segacrew" target="_blank">
+          <img src="twitch.png" alt="Twitch">
+        </a>
+        
+        <a href="https://discord.gg/QN6HvDZ" target="_blank">
+          <img src="discord.png" alt="Discord">
+        </a>
+
+        <a href="https://youtube.com/@segacrew" target="_blank">
+          <img src="youtube.png" alt="YouTube">
+        </a>
+
+        <a href="https://x.com/crew_sega" target="_blank">
+          <img src="x_logo.png" alt="X">
+        </a>
+
+        <a href="https://bsky.app/profile/segacrew.bsky.social" target="_blank">
+          <img src="bluesky.png" alt="Bluesky">
+        </a>
+      </div>
+    </div>
+    
+    <div class="sc-twitch">
+      <iframe
+        src="https://player.twitch.tv/?channel=segacrew&parent=stupendous-paletas-199024.netlify.app"
+        height="480"
+        width="100%"
+        muted="true"
+        allowfullscreen>
+      </iframe>
+    </div>
+  </section>
+</main>

@@ -1,0 +1,722 @@
+<style>
+  :root{
+    --sega-blue:#17569b;
+    --sega-blue-dark:#083a8c;
+    --bg:#f5f8fc;
+    --card:#ffffff;
+    --text:#1c2430;
+    --muted:#5f6b7a;
+    --border:#dbe4f0;
+    --shadow:0 10px 30px rgba(0,0,0,0.10);
+    --radius:18px;
+    --max:1200px;
+  }
+
+  *{box-sizing:border-box;}
+
+  body{
+    margin:0;
+    font-family:Arial, Helvetica, sans-serif;
+    background:var(--bg);
+    color:var(--text);
+  }
+
+  .sc-header{
+    background:linear-gradient(135deg,var(--sega-blue),var(--sega-blue-dark));
+    color:#fff;
+    position:sticky;
+    top:0;
+    z-index:1000;
+    box-shadow:0 4px 18px rgba(0,0,0,0.15);
+  }
+
+  .sc-header-inner{
+    max-width:var(--max);
+    margin:0 auto;
+    padding:16px 24px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:24px;
+  }
+
+  .sc-brand{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    text-decoration:none;
+    color:#fff;
+    min-width:0;
+  }
+
+  .sc-logo{
+    height:52px;
+    width:auto;
+    display:block;
+    border-radius:10px;
+    background:rgba(255,255,255,0);
+    padding:4px;
+  }
+
+  .sc-title-wrap{
+    min-width:0;
+  }
+
+  .sc-site-title{
+    margin:0;
+    font-size:1.5rem;
+    line-height:1.1;
+    font-weight:800;
+    letter-spacing:0.4px;
+  }
+
+  .sc-site-tag{
+    margin:4px 0 0;
+    font-size:0.92rem;
+    color:rgba(255,255,255,0.85);
+  }
+
+  .sc-nav{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    justify-content:flex-end;
+  }
+
+  .sc-nav a{
+    color:#fff;
+    text-decoration:none;
+    padding:10px 14px;
+    border-radius:999px;
+    font-weight:700;
+    font-size:0.95rem;
+    transition:background 0.2s ease, transform 0.2s ease;
+  }
+
+  .sc-nav a:hover{
+    background:rgba(255,255,255,0.14);
+    transform:translateY(-1px);
+  }
+
+  .sc-page{
+    max-width:var(--max);
+    margin:32px auto 0;
+    padding:0 24px 50px;
+    text-align: center;
+  }
+
+  .sc-card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:34px;
+  }
+
+  .sc-page-header{
+    margin-bottom:24px;
+  }
+
+  .sc-page-header h2{
+    margin:0 0 8px;
+    font-size:2rem;
+    color:var(--sega-blue-dark);
+  }
+
+  .sc-page-header p{
+    margin:0;
+    font-size:1rem;
+    color:var(--muted);
+    line-height:1.6;
+  }
+
+  .sc-page-content{
+    min-height:300px;
+  }
+  
+  .sc-page-controls{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  margin:28px auto 34px auto;
+  align-items:center;
+}
+
+.sc-label{
+  font-weight:700;
+  color:var(--sega-blue-dark);
+  font-size:0.95rem;
+  letter-spacing:0.2px;
+}
+
+.sc-dropdown{
+  position:relative;
+  width:100%;
+  max-width:460px;
+}
+
+.sc-dropdown-trigger{
+  width:100%;
+  padding:13px 44px 13px 16px;
+  border:1px solid #c9d8ec;
+  border-radius:14px;
+  background:#ffffff;
+  color:var(--text);
+  font-size:1rem;
+  font-family:Arial, Helvetica, sans-serif;
+  font-weight:600;
+  text-align:left;
+  box-shadow:0 6px 18px rgba(0,0,0,0.06);
+  outline:none;
+  cursor:pointer;
+  transition:border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+  position:relative;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.sc-dropdown-trigger::after{
+  content:"";
+  position:absolute;
+  right:14px;
+  top:50%;
+  width:10px;
+  height:10px;
+  border-right:2px solid var(--sega-blue);
+  border-bottom:2px solid var(--sega-blue);
+  transform:translateY(-65%) rotate(45deg);
+  transition:transform 0.2s ease;
+}
+
+.sc-dropdown.open .sc-dropdown-trigger::after{
+  transform:translateY(-35%) rotate(-135deg);
+}
+
+.sc-dropdown-trigger:hover{
+  border-color:#a9c3e7;
+  box-shadow:0 8px 22px rgba(0,0,0,0.08);
+}
+
+.sc-dropdown-trigger:focus{
+  border-color:var(--sega-blue);
+  box-shadow:0 0 0 4px rgba(23,86,155,0.14), 0 8px 22px rgba(0,0,0,0.08);
+}
+
+.sc-dropdown-menu{
+  position:absolute;
+  top:calc(100% + 8px);
+  left:0;
+  width:100%;
+  max-height:320px;
+  overflow-y:auto;
+  background:#fff;
+  border:1px solid #c9d8ec;
+  border-radius:14px;
+  box-shadow:0 12px 28px rgba(0,0,0,0.12);
+  padding:8px;
+  z-index:2000;
+  display:none;
+}
+
+.sc-dropdown.open .sc-dropdown-menu{
+  display:block;
+}
+
+.sc-dropdown-item{
+  width:100%;
+  border:none;
+  background:transparent;
+  padding:11px 12px;
+  border-radius:10px;
+  text-align:left;
+  font-size:0.97rem;
+  font-family:Arial, Helvetica, sans-serif;
+  color:var(--text);
+  cursor:pointer;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.sc-dropdown-item:hover{
+  background:#eef4ff;
+  color:var(--sega-blue-dark);
+}
+
+.sc-dropdown-item:focus{
+  outline:none;
+  background:#e5efff;
+}
+
+.sc-results-wrap{
+  margin-top:28px;
+}
+
+.sc-results-title{
+  margin:0 0 14px;
+  font-size:1.35rem;
+  color:var(--sega-blue-dark);
+  text-align:center;
+}
+
+.sc-results-message{
+  margin:0;
+  color:var(--muted);
+  text-align:center;
+}
+
+.sc-table-wrap{
+  width:100%;
+  overflow-x:auto;
+  border:1px solid var(--border);
+  border-radius:14px;
+  box-shadow:0 6px 18px rgba(0,0,0,0.06);
+  background:#fff;
+}
+
+.sc-table{
+  width:100%;
+  border-collapse:collapse;
+  min-width:720px;
+  table-layout:fixed;
+}
+
+.sc-table thead{
+  background:var(--sega-blue-dark);
+}
+
+
+.sc-table th,
+.sc-table td{
+  padding:12px 14px;
+  text-align:left;
+  border-bottom:1px solid #e7edf5;
+  font-size:0.95rem;
+  line-height:1.35;
+  
+  white-space:normal;
+  word-break:break-word;
+}
+
+.sc-table th:nth-child(1),
+.sc-table td:nth-child(1){
+  width:26%;
+}
+
+.sc-table th:nth-child(2),
+.sc-table td:nth-child(2){
+  width:16%;
+}
+
+.sc-table th:nth-child(3),
+.sc-table td:nth-child(3){
+  width:16%;
+}
+
+.sc-table th:nth-child(4),
+.sc-table td:nth-child(4){
+  width:20%;
+}
+
+.sc-table th:nth-child(5),
+.sc-table td:nth-child(5){
+  width:16%;
+}
+
+.sc-date-row td{
+  background:#eef4ff;
+  color:var(--sega-blue-dark);
+  font-weight:500;
+  letter-spacing:0.4px;
+  text-transform:uppercase;
+  padding:10px 14px;
+  border-bottom1px solid #d7e2f0;
+  text-align:center;
+}
+
+.sc-table th{
+  color:#ffffff;
+  font-weight:800;
+  letter-spacing:0.2px;
+}
+
+.sc-table td a{
+  color:var(--sega-blue);
+  text-decoration:none;
+}
+
+.sc-table td a:hover{
+  text-decoration:underline;
+  color:var(--sega-blue-dark);
+}
+
+.sc-table tbody tr:hover{
+  background:#f8fbff;
+}
+
+.sc-game-link{
+  background:none;
+  border:none;
+  padding:0;
+  margin:0;
+  color:var(--sega-blue);
+  font:inherit;
+  font-weight:700;
+  text-align:left;
+  cursor:pointer;
+  text-decoration:none;
+}
+
+.sc-game-link:hover{
+  color:var(--sega-blue-dark);
+  text-decoration:underline;
+}
+
+.sc-modal{
+  position:fixed;
+  inset:0;
+  background:rgba(10,18,30,0.7);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  z-index:5000;
+}
+
+.sc-modal.open{
+  display:flex;
+}
+
+.sc-modal-content{
+  width:min(900px, 100%);
+  max-height:90vh;
+  overflow-y:auto;
+  background:#fff;
+  border-radius:18px;
+  box-shadow:0 20px 60px rgba(0,0,0,0.25);
+  position:relative;
+  padding:28px;
+  text-align:left;
+}
+
+.sc-modal-close{
+  position:absolute;
+  top:14px;
+  right:14px;
+  width:40px;
+  height:40px;
+  border:none;
+  border-radius:999px;
+  background:#eef4ff;
+  color:var(--sega-blue-dark);
+  font-size:1.4rem;
+  line-height:1;
+  cursor:pointer;
+  font-weight:700;
+}
+
+.sc-modal-close:hover{
+  background:#dfecff;
+}
+
+.sc-modal-title{
+  margin:0 40px 8px 0;
+  font-size:1.8rem;
+  color:var(--sega-blue-dark);
+  line-height:1.15;
+}
+
+.sc-modal-subtitle{
+  margin:0 0 18px;
+  color:var(--muted);
+  font-size:1rem;
+  line-height:1.5;
+}
+
+.sc-modal-video{
+  width:100%;
+  aspect-ratio:16 / 9;
+  border:none;
+  border-radius:14px;
+  background:#000;
+  display:block;
+}
+
+.sc-modal-message{
+  margin:16px 0 0;
+  color:var(--muted);
+}
+
+.sc-event-image-wrap{
+  display:flex;
+  justify-content:center;
+  margin:0 0 22px;
+}
+
+.sc-event-image{
+  height:150px;
+  width:auto;
+  max-width:100%;
+  display:block;
+  object-fit:contain;
+}
+
+.sc-modal-subtitle{
+  margin:0 0 18px;
+  color:var(--muted);
+  font-size:1rem;
+  line-height:1.6;
+}
+
+.sc-modal-meta-line + .sc-modal-meta-line{
+  margin-top:4px;
+}
+
+.sc-modal-commentary{
+  color:var(--muted);
+}
+
+.sc-modal-event{
+  font-size:1.15rem;
+  font-weight:700;
+  color:var(--sega-blue-dark);
+  margin-bottom:6px;
+  letter-spacing:0.3px;
+}
+
+.sc-modal-subtitle a{
+  color:inherit;
+  text-decoration:none;
+  font-weight:inherit;
+}
+
+.sc-modal-subtitle a:hover{
+  text-decoration:underline;
+}
+
+.sc-modal-nav{
+  display:flex;
+  justify-content:space-between;
+  margin-bottom:12px;
+}
+
+.sc-modal-nav button{
+  background:#eef4ff;
+  border:1px solid #cfe0ff;
+  color:var(--sega-blue-dark);
+  font-weight:700;
+  padding:8px 14px;
+  border-radius:10px;
+  cursor:pointer;
+}
+
+.sc-modal-nav button:hover:not(:disabled){
+  background:#dbe9ff;
+}
+
+.sc-modal-nav button:disabled{
+  opacity:0.4;
+  cursor:default;
+}
+
+.sc-modal-video + .sc-modal-video{
+  margin-top:16px;
+}
+
+.sc-race-tables-wrap{
+  display:flex;
+  justify-content:center;
+  gap:18px;
+  flex-wrap:wrap;
+  margin:0 0 18px;
+}
+
+.sc-race-box{
+  min-width:320px;
+  max-width:420px;
+  background:#f8fbff;
+  border:1px solid var(--border);
+  border-radius:14px;
+  box-shadow:0 6px 18px rgba(0,0,0,0.06);
+  overflow:hidden;
+}
+
+.sc-race-title{
+  background:var(--sega-blue-dark);
+  color:#fff;
+  font-weight:800;
+  letter-spacing:0.3px;
+  text-align:center;
+  padding:10px 14px;
+}
+
+.sc-race-table{
+  width:100%;
+  border-collapse:collapse;
+}
+
+.sc-race-table th,
+.sc-race-table td{
+  padding:10px 12px;
+  border-bottom:1px solid #e7edf5;
+  font-size:0.95rem;
+  text-align:center;
+}
+
+.sc-race-table th{
+  background:#eef4ff;
+  color:var(--sega-blue-dark);
+  font-weight:800;
+}
+
+.sc-race-table td:first-child,
+.sc-race-table th:first-child{
+  text-align:left;
+}
+
+.sc-race-table tbody tr:last-child td{
+  border-bottom:none;
+}
+
+  @media (max-width: 900px){
+    .sc-header-inner{
+      flex-direction:column;
+      align-items:flex-start;
+      padding:14px 16px;
+      gap:14px;
+    }
+    
+    .sc-event-image{
+  height:100px;
+}
+
+.sc-race-box{
+  min-width:100%;
+}
+
+.sc-race-table th,
+.sc-race-table td{
+  font-size:0.9rem;
+  padding:9px 10px;
+}
+
+    .sc-brand{
+      width:100%;
+    }
+
+    .sc-logo{
+      height:44px;
+    }
+
+    .sc-site-title{
+      font-size:1.25rem;
+    }
+
+    .sc-site-tag{
+      font-size:0.85rem;
+    }
+
+    .sc-nav{
+      justify-content:flex-start;
+      width:100%;
+      gap:8px;
+    }
+
+    .sc-nav a{
+      padding:8px 12px;
+      font-size:0.9rem;
+    }
+
+    .sc-page{
+      margin:20px auto 0;
+      padding:0 16px 40px;
+    }
+
+    .sc-card{
+      padding:22px 18px;
+    }
+
+    .sc-page-header h2{
+      font-size:1.5rem;
+    }
+
+    .sc-page-header p{
+      font-size:0.95rem;
+      line-height:1.6;
+    }
+    
+    .sc-dropdown{
+  max-width:100%;
+}
+
+.sc-dropdown-trigger{
+  font-size:0.95rem;
+}
+
+.sc-dropdown-item{
+  font-size:0.95rem;
+}
+
+.sc-results-title{
+  font-size:1.15rem;
+}
+
+.sc-table th,
+.sc-table td{
+  padding:10px 12px;
+  font-size:0.9rem;
+}
+
+.sc-modal{
+    padding:14px;
+  }
+
+  .sc-modal-content{
+    padding:20px;
+  }
+
+  .sc-modal-title{
+    font-size:1.35rem;
+  }
+
+  .sc-modal-subtitle{
+    font-size:0.95rem;
+  }
+    
+  }
+</style>
+
+<header class="sc-header">
+  <div class="sc-header-inner">
+    <a href="/" class="sc-brand">
+      <img class="sc-logo" src="segacrew_logo.png" alt="Sega Crew logo">
+      <div class="sc-title-wrap">
+        <h1 class="sc-site-title">Sega Crew</h1>
+        <p class="sc-site-tag">Events • Archive • Speedruns • Community</p>
+      </div>
+    </a>
+
+    <nav class="sc-nav">
+      <a href="/event-archive.html">Event Archive</a>
+      <a href="/member-directory.html">Member Directory</a>
+      <a href="/game-directory.html">Game Directory</a>
+      <a href="/sega-crew-stats.html">Sega Crew Stats</a>
+    </nav>
+  </div>
+</header>
+
+<main class="sc-page">
+  <section class="sc-card">
+    <div class="sc-page-header">
+      <h2>SEGA CREW EVENT ARCHIVE</h2>
+    </div>
+    
+<div id="controls"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="event.html"></script>
+
+    
+  </section>
+</main>
