@@ -6,8 +6,17 @@ document.addEventListener("DOMContentLoaded", () => {
   let allRows = [];
   let socialsRows = [];
 
-  const CSV_URL = "https://stupendous-paletas-199024.netlify.app/sega crew database - master sheet.csv";
-  const SOCIALS_CSV_URL = "https://stupendous-paletas-199024.netlify.app/SEGA CREW MEMBER LINKS - MASTER.csv";
+  const IS_LOCAL =
+  window.location.hostname === "127.0.0.1" ||
+  window.location.hostname === "localhost";
+
+const CSV_URL = IS_LOCAL
+  ? "sega crew database - master sheet.csv"
+  : "https://stupendous-paletas-199024.netlify.app/sega crew database - master sheet.csv";
+
+const SOCIALS_CSV_URL = IS_LOCAL
+  ? "SEGA CREW MEMBER LINKS - MASTER.csv"
+  : "https://stupendous-paletas-199024.netlify.app/SEGA CREW MEMBER LINKS - MASTER.csv";
 
   const ICONS = {
     twitch: "images/twitch.png",
@@ -22,7 +31,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const label = document.createElement("div");
   label.className = "sc-label";
-  label.textContent = "Select Member";
+  
 
   const dropdown = document.createElement("div");
   dropdown.className = "sc-dropdown";
@@ -94,10 +103,125 @@ document.addEventListener("DOMContentLoaded", () => {
     div.textContent = (name || "?").charAt(0).toUpperCase();
     return div;
   }
+  
+  function buildMemberSummary(memberName) {
+  const memberRows = allRows.filter(row => rowIncludesRunner(row, memberName));
+
+  const runCount = memberRows.length;
+
+  let firstEvent = "—";
+  let lastEvent = "—";
+
+  const datedRows = memberRows
+    .map(row => ({
+      event: normalizeName(row.EVENT),
+      date: parseEventDate(row.DATE)
+    }))
+    .filter(item => item.event && item.date instanceof Date && !Number.isNaN(item.date.getTime()));
+
+  if (datedRows.length) {
+    datedRows.sort((a, b) => a.date - b.date);
+    firstEvent = datedRows[0].event || "—";
+    lastEvent = datedRows[datedRows.length - 1].event || "—";
+  }
+
+  const gameCounts = new Map();
+  const consoleCounts = new Map();
+
+  memberRows.forEach(row => {
+    const game = normalizeName(row.GAME);
+    const consoleName = normalizeName(row.CONSOLE);
+
+    if (game) {
+      gameCounts.set(game, (gameCounts.get(game) || 0) + 1);
+    }
+
+    if (consoleName) {
+      consoleCounts.set(consoleName, (consoleCounts.get(consoleName) || 0) + 1);
+    }
+  });
+
+  let mostPlayedGame = "—";
+  let mostPlayedGameCount = 0;
+
+  for (const [game, count] of gameCounts.entries()) {
+    if (count > mostPlayedGameCount) {
+      mostPlayedGame = game;
+      mostPlayedGameCount = count;
+    }
+  }
+
+  let mostPlayedConsole = "—";
+  let mostPlayedConsoleCount = 0;
+
+  for (const [consoleName, count] of consoleCounts.entries()) {
+    if (count > mostPlayedConsoleCount) {
+      mostPlayedConsole = consoleName;
+      mostPlayedConsoleCount = count;
+    }
+  }
+
+  const mostPlayedGameDisplay =
+    mostPlayedGame === "—"
+      ? "—"
+      : `${mostPlayedGame} (${mostPlayedGameCount} ${mostPlayedGameCount === 1 ? "time" : "times"})`;
+
+  return {
+    runCount,
+    firstEvent,
+    lastEvent,
+    mostPlayedConsole,
+    mostPlayedGameDisplay
+  };
+}
+
+function renderMemberSummary(memberName) {
+  const summary = buildMemberSummary(memberName);
+
+  const wrap = document.createElement("div");
+  wrap.className = "sc-member-summary-wrap";
+
+  const card = document.createElement("div");
+  card.className = "sc-member-summary-card";
+
+  card.innerHTML = `
+    <h3 class="sc-member-summary-title">SUMMARY</h3>
+    <div class="sc-member-summary-grid">
+      <div class="sc-member-stat">
+        <p class="sc-member-stat-label">Number of Runs</p>
+        <p class="sc-member-stat-value">${escapeHtml(String(summary.runCount))}</p>
+      </div>
+
+      <div class="sc-member-stat">
+        <p class="sc-member-stat-label">Most Played Console</p>
+        <p class="sc-member-stat-value">${escapeHtml(summary.mostPlayedConsole)}</p>
+      </div>
+
+      <div class="sc-member-stat">
+        <p class="sc-member-stat-label">Most Played Game</p>
+        <p class="sc-member-stat-value">${escapeHtml(summary.mostPlayedGameDisplay)}</p>
+      </div>
+
+      <div class="sc-member-stat">
+        <p class="sc-member-stat-label">First Event</p>
+        <p class="sc-member-stat-value">${escapeHtml(summary.firstEvent)}</p>
+      </div>
+
+      <div class="sc-member-stat">
+        <p class="sc-member-stat-label">Last Event</p>
+        <p class="sc-member-stat-value">${escapeHtml(summary.lastEvent)}</p>
+      </div>
+    </div>
+  `;
+
+  wrap.appendChild(card);
+  content.appendChild(wrap);
+  renderMemberSummary(name);
+}
 
   async function getTwitchProfileImage(login) {
     try {
-      const response = await fetch(`/.netlify/functions/twitch-user?login=${encodeURIComponent(login)}`);
+      const response = await fetch(`/api/twitch-user?login=${encodeURIComponent(login)}`);
       if (!response.ok) return "";
       const data = await response.json();
       return data.profile_image_url || "";
