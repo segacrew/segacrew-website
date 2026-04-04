@@ -82,9 +82,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function getTwitchProfileImage(login) {
-    // Recommended approach:
-    // Create your own tiny endpoint like /api/twitch-user?login=NAME
-    // That endpoint should call Twitch Helix Get Users and return profile_image_url.
     try {
       const response = await fetch(`/api/twitch-user?login=${encodeURIComponent(login)}`);
       if (!response.ok) return "";
@@ -119,7 +116,6 @@ document.addEventListener("DOMContentLoaded", () => {
       <a class="sc-member-link" href="https://twitch.tv/${encodeURIComponent(name)}" target="_blank" rel="noopener noreferrer">
         https://twitch.tv/${escapeHtml(name)}
       </a>
-      <p class="sc-member-note">Twitch profile image will appear here automatically once a Twitch lookup endpoint is connected.</p>
     `;
 
     card.appendChild(photoWrap);

@@ -241,6 +241,121 @@
   }
 }
 
+.sc-page-controls{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  margin:28px auto 34px auto;
+  align-items:center;
+}
+
+.sc-label{
+  font-weight:700;
+  color:var(--sega-blue-dark);
+  font-size:0.95rem;
+  letter-spacing:0.2px;
+}
+
+.sc-dropdown{
+  position:relative;
+  width:100%;
+  max-width:460px;
+}
+
+.sc-dropdown-trigger{
+  width:100%;
+  padding:13px 44px 13px 16px;
+  border:1px solid #c9d8ec;
+  border-radius:14px;
+  background:#ffffff;
+  color:var(--text);
+  font-size:1rem;
+  font-family:Arial, Helvetica, sans-serif;
+  font-weight:600;
+  text-align:left;
+  box-shadow:0 6px 18px rgba(0,0,0,0.06);
+  outline:none;
+  cursor:pointer;
+  transition:border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+  position:relative;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.sc-dropdown-trigger::after{
+  content:"";
+  position:absolute;
+  right:14px;
+  top:50%;
+  width:10px;
+  height:10px;
+  border-right:2px solid var(--sega-blue);
+  border-bottom:2px solid var(--sega-blue);
+  transform:translateY(-65%) rotate(45deg);
+  transition:transform 0.2s ease;
+}
+
+.sc-dropdown.open .sc-dropdown-trigger::after{
+  transform:translateY(-35%) rotate(-135deg);
+}
+
+.sc-dropdown-trigger:hover{
+  border-color:#a9c3e7;
+  box-shadow:0 8px 22px rgba(0,0,0,0.08);
+}
+
+.sc-dropdown-trigger:focus{
+  border-color:var(--sega-blue);
+  box-shadow:0 0 0 4px rgba(23,86,155,0.14), 0 8px 22px rgba(0,0,0,0.08);
+}
+
+.sc-dropdown-menu{
+  position:absolute;
+  top:calc(100% + 8px);
+  left:0;
+  width:100%;
+  max-height:320px;
+  overflow-y:auto;
+  background:#fff;
+  border:1px solid #c9d8ec;
+  border-radius:14px;
+  box-shadow:0 12px 28px rgba(0,0,0,0.12);
+  padding:8px;
+  z-index:2000;
+  display:none;
+}
+
+.sc-dropdown.open .sc-dropdown-menu{
+  display:block;
+}
+
+.sc-dropdown-item{
+  width:100%;
+  border:none;
+  background:transparent;
+  padding:11px 12px;
+  border-radius:10px;
+  text-align:left;
+  font-size:0.97rem;
+  font-family:Arial, Helvetica, sans-serif;
+  color:var(--text);
+  cursor:pointer;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.sc-dropdown-item:hover{
+  background:#eef4ff;
+  color:var(--sega-blue-dark);
+}
+
+.sc-dropdown-item:focus{
+  outline:none;
+  background:#e5efff;
+}
+
   @media (max-width: 900px){
     .sc-header-inner{
       flex-direction:column;
