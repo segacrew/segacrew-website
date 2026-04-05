@@ -1144,7 +1144,7 @@ function renderMemberSummary(memberName) {
   summaryCard.className = "sc-member-summary-card";
 
   summaryCard.innerHTML = `
-    <h3 class="sc-member-summary-title">SUMMARY</h3>
+    <h3 class="sc-member-summary-title">RUNNER SUMMARY</h3>
     <div class="sc-member-summary-grid">
       <div class="sc-member-stat">
         <p class="sc-member-stat-label">First Event</p>
@@ -1152,7 +1152,7 @@ function renderMemberSummary(memberName) {
       </div>
 
       <div class="sc-member-stat">
-        <p class="sc-member-stat-label">Last Event</p>
+        <p class="sc-member-stat-label">Most Event</p>
         <p class="sc-member-stat-value">${escapeHtml(summary.lastEvent)}</p>
       </div>
 
@@ -1182,7 +1182,7 @@ function renderMemberSummary(memberName) {
   visualCard.className = "sc-member-summary-card sc-member-visual-card";
 
   visualCard.innerHTML = `
-    <h3 class="sc-member-summary-title">VISUALS</h3>
+    <h3 class="sc-member-summary-title">ADVANCED STATISTICS</h3>
     <div class="sc-member-visual-controls">
       <div class="sc-dropdown sc-visual-dropdown">
         <button type="button" class="sc-dropdown-trigger sc-visual-trigger" aria-haspopup="listbox" aria-expanded="false">
