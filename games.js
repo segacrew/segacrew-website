@@ -541,8 +541,20 @@ nextBtn.addEventListener("click", () => {
   }
 
   async function getIGDBBoxArt(gameName, gameRows) {
+  try {
+    const consoleName = normalizeName(gameRows?.[0]?.CONSOLE || "");
+    const response = await fetch(
+      `/api/igdb-cover?game=${encodeURIComponent(gameName)}&console=${encodeURIComponent(consoleName)}`
+    );
+
+    if (!response.ok) return "";
+
+    const data = await response.json();
+    return data.cover_url || "";
+  } catch {
     return "";
   }
+}
 
   function getGameRows(selectedOption) {
   const matchingTrilogies = getMatchingTrilogyTitles(selectedOption.game);
