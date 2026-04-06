@@ -14,6 +14,8 @@ document.addEventListener("DOMContentLoaded", () => {
   let allRows = [];
   let currentGameRunRows = [];
   let currentGameRunIndex = -1;
+  let selectedConsoleFilter = "";
+  let currentGameOptions = [];
   
   const TRILOGY_MAP = {
   "Golden Axe Trilogy": [
@@ -65,25 +67,59 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const wrapper = document.createElement("div");
   wrapper.className = "sc-page-controls";
+  
+  const consoleLabel = document.createElement("div");
+consoleLabel.className = "sc-label";
+consoleLabel.textContent = "Filter by Console";
+
+const consoleDropdown = document.createElement("div");
+consoleDropdown.className = "sc-dropdown";
+consoleDropdown.id = "consoleDropdown";
+
+const consoleTrigger = document.createElement("button");
+consoleTrigger.type = "button";
+consoleTrigger.className = "sc-dropdown-trigger";
+consoleTrigger.setAttribute("aria-haspopup", "listbox");
+consoleTrigger.setAttribute("aria-expanded", "false");
+consoleTrigger.textContent = "All Consoles";
+
+const consoleMenu = document.createElement("div");
+consoleMenu.className = "sc-dropdown-menu";
+consoleMenu.setAttribute("role", "listbox");
+
+consoleDropdown.appendChild(consoleTrigger);
+consoleDropdown.appendChild(consoleMenu);
+
+const gameLabel = document.createElement("div");
+gameLabel.className = "sc-label";
+
+const dropdown = document.createElement("div");
+dropdown.className = "sc-dropdown";
+dropdown.id = "gameDropdown";
+
+const trigger = document.createElement("button");
+trigger.type = "button";
+trigger.className = "sc-dropdown-trigger";
+trigger.setAttribute("aria-haspopup", "listbox");
+trigger.setAttribute("aria-expanded", "false");
+trigger.textContent = "Loading games...";
+
+const menu = document.createElement("div");
+menu.className = "sc-dropdown-menu";
+menu.setAttribute("role", "listbox");
+
+dropdown.appendChild(trigger);
+dropdown.appendChild(menu);
+
+wrapper.appendChild(consoleLabel);
+wrapper.appendChild(consoleDropdown);
+wrapper.appendChild(gameLabel);
+wrapper.appendChild(dropdown);
+controls.appendChild(wrapper);
 
   const label = document.createElement("div");
   label.className = "sc-label";
-  label.textContent = "Select Game";
 
-  const dropdown = document.createElement("div");
-  dropdown.className = "sc-dropdown";
-  dropdown.id = "gameDropdown";
-
-  const trigger = document.createElement("button");
-  trigger.type = "button";
-  trigger.className = "sc-dropdown-trigger";
-  trigger.setAttribute("aria-haspopup", "listbox");
-  trigger.setAttribute("aria-expanded", "false");
-  trigger.textContent = "Loading games...";
-
-  const menu = document.createElement("div");
-  menu.className = "sc-dropdown-menu";
-  menu.setAttribute("role", "listbox");
 
   dropdown.appendChild(trigger);
   dropdown.appendChild(menu);
@@ -127,6 +163,7 @@ const nextBtn = modal.querySelector(".sc-modal-next");
     dropdown.classList.add("open");
     trigger.setAttribute("aria-expanded", "true");
   }
+  
 
   function normalizeName(value) {
     return String(value || "").trim();
@@ -277,6 +314,93 @@ function formatSecondsAsTime(totalSeconds) {
   }
 
   return `${minutes}:${String(secs).padStart(2, "0")}`;
+}
+
+function getUniqueConsoles(rows) {
+  const consoles = new Set();
+
+  rows.forEach(row => {
+    const consoleName = normalizeName(row.CONSOLE);
+    if (consoleName) consoles.add(consoleName);
+  });
+
+  return [...consoles].sort((a, b) =>
+    a.localeCompare(b, undefined, { sensitivity: "base" })
+  );
+}
+
+function closeConsoleMenu() {
+  consoleDropdown.classList.remove("open");
+  consoleTrigger.setAttribute("aria-expanded", "false");
+}
+
+function openConsoleMenu() {
+  consoleDropdown.classList.add("open");
+  consoleTrigger.setAttribute("aria-expanded", "true");
+}
+
+function populateGameDropdown() {
+  currentGameOptions = getGameDropdownOptions(allRows, selectedConsoleFilter);
+
+  menu.innerHTML = "";
+  trigger.textContent = "Select a game";
+
+  if (!currentGameOptions.length) {
+    trigger.textContent = "No games found";
+    return;
+  }
+
+  const defaultItem = document.createElement("button");
+  defaultItem.type = "button";
+  defaultItem.className = "sc-dropdown-item";
+  defaultItem.textContent = "Select a game";
+  defaultItem.addEventListener("click", () => setSelected(null));
+  menu.appendChild(defaultItem);
+
+  currentGameOptions.forEach(option => {
+    const item = document.createElement("button");
+    item.type = "button";
+    item.className = "sc-dropdown-item";
+    item.textContent = option.label;
+    item.title = option.label;
+    item.addEventListener("click", () => setSelected(option));
+    menu.appendChild(item);
+  });
+}
+
+function populateConsoleDropdown() {
+  const consoles = getUniqueConsoles(allRows);
+
+  consoleMenu.innerHTML = "";
+
+  const allItem = document.createElement("button");
+  allItem.type = "button";
+  allItem.className = "sc-dropdown-item";
+  allItem.textContent = "All Consoles";
+  allItem.addEventListener("click", () => {
+    selectedConsoleFilter = "";
+    consoleTrigger.textContent = "All Consoles";
+    closeConsoleMenu();
+    setSelected(null);
+    populateGameDropdown();
+  });
+  consoleMenu.appendChild(allItem);
+
+  consoles.forEach(consoleName => {
+    const item = document.createElement("button");
+    item.type = "button";
+    item.className = "sc-dropdown-item";
+    item.textContent = consoleName;
+    item.title = consoleName;
+    item.addEventListener("click", () => {
+      selectedConsoleFilter = consoleName;
+      consoleTrigger.textContent = consoleName;
+      closeConsoleMenu();
+      setSelected(null);
+      populateGameDropdown();
+    });
+    consoleMenu.appendChild(item);
+  });
 }
 
 function formatDifferenceFromLeader(diffSeconds) {
@@ -485,7 +609,7 @@ nextBtn.addEventListener("click", () => {
   }
 });
 
-  function getGameDropdownOptions(rows) {
+  function getGameDropdownOptions(rows, consoleFilter = "") {
   const gameToConsoles = new Map();
 
   rows.forEach(row => {
@@ -494,6 +618,8 @@ nextBtn.addEventListener("click", () => {
 
     if (!game) return;
     if (isTrilogyTitle(game)) return;
+
+    if (consoleFilter && consoleName !== consoleFilter) return;
 
     if (!gameToConsoles.has(game)) {
       gameToConsoles.set(game, new Set());
@@ -785,12 +911,24 @@ if (topRunners.length === 1) {
       openMenu();
     }
   });
+  
+  consoleTrigger.addEventListener("click", (e) => {
+  e.stopPropagation();
+  if (consoleDropdown.classList.contains("open")) {
+    closeConsoleMenu();
+  } else {
+    openConsoleMenu();
+  }
+});
 
   document.addEventListener("click", (e) => {
-    if (!dropdown.contains(e.target)) {
-      closeMenu();
-    }
-  });
+  if (!dropdown.contains(e.target)) {
+    closeMenu();
+  }
+  if (!consoleDropdown.contains(e.target)) {
+    closeConsoleMenu();
+  }
+});
 
   Papa.parse(CSV_URL, {
     download: true,
@@ -798,16 +936,14 @@ if (topRunners.length === 1) {
     skipEmptyLines: true,
     complete: function(results) {
       allRows = results.data || [];
-      const gameOptions = getGameDropdownOptions(allRows);
+      populateConsoleDropdown();
+populateGameDropdown();
 
-      menu.innerHTML = "";
-      trigger.textContent = "Select a game";
-
-      if (!gameOptions.length) {
-        trigger.textContent = "No games found";
-        content.innerHTML = `<p class="sc-results-message">No games were found in the CSV.</p>`;
-        return;
-      }
+if (!currentGameOptions.length) {
+  trigger.textContent = "No games found";
+  content.innerHTML = `<p class="sc-results-message">No games were found in the CSV.</p>`;
+  return;
+}
 
       const defaultItem = document.createElement("button");
       defaultItem.type = "button";
