@@ -37,6 +37,186 @@ async function getAppAccessToken() {
   return cachedToken;
 }
 
+function normalizePlatformName(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+const PLATFORM_ALIASES = {
+  "genesis": [
+    "genesis",
+    "sega genesis",
+    "mega drive",
+    "sega mega drive"
+  ],
+  "mega drive": [
+    "genesis",
+    "sega genesis",
+    "mega drive",
+    "sega mega drive"
+  ],
+  "32x": [
+    "32x",
+    "sega 32x"
+  ],
+  "sega 32x": [
+    "32x",
+    "sega 32x"
+  ],
+  "game gear": [
+    "game gear",
+    "sega game gear"
+  ],
+  "master system": [
+    "master system",
+    "sega master system",
+    "sms"
+  ],
+  "sms": [
+    "master system",
+    "sega master system",
+    "sms"
+  ],
+  "saturn": [
+    "saturn",
+    "sega saturn"
+  ],
+  "dreamcast": [
+    "dreamcast",
+    "sega dreamcast"
+  ],
+  "cd": [
+    "cd",
+    "sega cd",
+    "mega cd"
+  ],
+  "sega cd": [
+    "cd",
+    "sega cd",
+    "mega cd"
+  ],
+  "mega cd": [
+    "cd",
+    "sega cd",
+    "mega cd"
+  ],
+  "game boy advance": [
+    "game boy advance",
+    "gba"
+  ],
+  "gba": [
+    "game boy advance",
+    "gba"
+  ],
+  "ds": [
+    "ds",
+    "nintendo ds"
+  ],
+  "nintendo ds": [
+    "ds",
+    "nintendo ds"
+  ],
+  "3ds": [
+    "3ds",
+    "nintendo 3ds"
+  ],
+  "nintendo 3ds": [
+    "3ds",
+    "nintendo 3ds"
+  ],
+  "wii": [
+    "wii",
+    "nintendo wii"
+  ],
+  "gamecube": [
+    "gamecube",
+    "nintendo gamecube",
+    "gc"
+  ],
+  "gc": [
+    "gamecube",
+    "nintendo gamecube",
+    "gc"
+  ],
+  "switch": [
+    "switch",
+    "nintendo switch"
+  ],
+  "playstation": [
+    "playstation",
+    "ps1",
+    "psx",
+    "sony playstation"
+  ],
+  "ps1": [
+    "playstation",
+    "ps1",
+    "psx",
+    "sony playstation"
+  ],
+  "psx": [
+    "playstation",
+    "ps1",
+    "psx",
+    "sony playstation"
+  ],
+  "playstation 2": [
+    "playstation 2",
+    "ps2"
+  ],
+  "ps2": [
+    "playstation 2",
+    "ps2"
+  ],
+  "playstation 3": [
+    "playstation 3",
+    "ps3"
+  ],
+  "ps3": [
+    "playstation 3",
+    "ps3"
+  ],
+  "playstation 4": [
+    "playstation 4",
+    "ps4"
+  ],
+  "ps4": [
+    "playstation 4",
+    "ps4"
+  ],
+  "playstation 5": [
+    "playstation 5",
+    "ps5"
+  ],
+  "ps5": [
+    "playstation 5",
+    "ps5"
+  ],
+  "xbox": [
+    "xbox",
+    "original xbox"
+  ],
+  "xbox 360": [
+    "xbox 360",
+    "360"
+  ],
+  "360": [
+    "xbox 360",
+    "360"
+  ]
+};
+
+function expandPlatformAliases(value) {
+  const normalized = normalizePlatformName(value);
+  const aliases = PLATFORM_ALIASES[normalized] || [normalized];
+  return new Set(aliases.map(normalizePlatformName));
+}
+
 function normalize(value) {
   return String(value || "").trim().toLowerCase();
 }
@@ -44,9 +224,8 @@ function normalize(value) {
 function scoreCandidate(gameName, consoleName, candidate) {
   let score = 0;
 
-  const candidateName = normalize(candidate.name);
+  const candidateName = normalize(gameName ? candidate.name : "");
   const targetName = normalize(gameName);
-  const targetConsole = normalize(consoleName);
 
   if (candidateName === targetName) {
     score += 100;
@@ -54,20 +233,33 @@ function scoreCandidate(gameName, consoleName, candidate) {
     score += 40;
   }
 
-  const platformNames = Array.isArray(candidate.platforms)
-    ? candidate.platforms.map(p => normalize(p.name))
+  const targetPlatformAliases = expandPlatformAliases(consoleName);
+
+  const candidatePlatformNames = Array.isArray(candidate.platforms)
+    ? candidate.platforms.map(p => p.name)
     : [];
 
-  if (targetConsole) {
-    const exactPlatformMatch = platformNames.some(name => name === targetConsole);
-    const partialPlatformMatch = platformNames.some(
-      name => name.includes(targetConsole) || targetConsole.includes(name)
+  const candidatePlatformAliases = new Set(
+    candidatePlatformNames.flatMap(name => [...expandPlatformAliases(name)])
+  );
+
+  if (consoleName) {
+    const exactAliasMatch = [...targetPlatformAliases].some(alias =>
+      candidatePlatformAliases.has(alias)
     );
 
-    if (exactPlatformMatch) {
+    if (exactAliasMatch) {
       score += 100;
-    } else if (partialPlatformMatch) {
-      score += 40;
+    } else {
+      const partialMatch = [...targetPlatformAliases].some(targetAlias =>
+        [...candidatePlatformAliases].some(candidateAlias =>
+          candidateAlias.includes(targetAlias) || targetAlias.includes(candidateAlias)
+        )
+      );
+
+      if (partialMatch) {
+        score += 40;
+      }
     }
   }
 
