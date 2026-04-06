@@ -785,9 +785,9 @@ if (topRunners.length === 1) {
       <th>GAME</th>
       <th>EVENT</th>
       <th>DATE</th>
-      <th>RUNTYPE</th>
-      <th>SPEEDRUNCATEGORY</th>
-      <th>RUNNER</th>
+      <th>RUN TYPE</th>
+      <th>SPEEDRUN CATEGORY</th>
+      <th>RUNNER(S)</th>
     </tr>
   `;
 
