@@ -948,7 +948,7 @@ function getRowsWithVodForRunner(memberName) {
 function buildPlaytimeRankingData() {
   const members = getUniqueMemberNames();
 
-  playtimeRankingData = members.map(name => {
+  const ranking = members.map(name => {
     let totalSeconds = 0;
 
     getRowsWithVodForRunner(name).forEach(row => {
@@ -971,20 +971,25 @@ function buildPlaytimeRankingData() {
   })
   .filter(item => item.value > 0)
   .sort((a, b) => b.value - a.value);
+
+  playtimeRankingData = ranking;
+  return ranking;
 }
 
 function getTotalPlaytimeStatsForRunner(memberName) {
-  const totalAllSeconds = playtimeRankingData.reduce((sum, item) => sum + item.value, 0);
+  const ranking = Array.isArray(playtimeRankingData) ? playtimeRankingData : [];
 
-  const runnerEntry = playtimeRankingData.find(
+  const totalAllSeconds = ranking.reduce((sum, item) => sum + item.value, 0);
+
+  const runnerEntry = ranking.find(
     item => normalizeHandle(item.name) === normalizeHandle(memberName)
   );
 
-  const totalSeconds = runnerEntry ? runnerEntry.value : 0;
   const rank = runnerEntry
-    ? playtimeRankingData.findIndex(item => normalizeHandle(item.name) === normalizeHandle(memberName)) + 1
+    ? ranking.findIndex(item => normalizeHandle(item.name) === normalizeHandle(memberName)) + 1
     : null;
 
+  const totalSeconds = runnerEntry ? runnerEntry.value : 0;
   const percentOfAll = totalAllSeconds > 0 ? (totalSeconds / totalAllSeconds) * 100 : 0;
 
   return {
@@ -992,7 +997,7 @@ function getTotalPlaytimeStatsForRunner(memberName) {
     totalDisplay: totalSeconds > 0 ? formatSecondsAsTime(totalSeconds) : "—",
     percentOfAll,
     rank,
-    totalRunners: playtimeRankingData.length
+    totalRunners: ranking.length
   };
 }
 
@@ -1798,6 +1803,7 @@ function getRacesForRunner(memberName) {
 
 async function renderMemberSummary(memberName) {
   const summary = buildMemberSummary(memberName);
+  console.log("playtimeRankingData at render:", playtimeRankingData);
   const playtimeStats = getTotalPlaytimeStatsForRunner(memberName);
 
   const wrap = document.createElement("div");
@@ -2163,6 +2169,8 @@ function renderMemberCommentaryTable(memberName) {
     allRows = await loadCsv(CSV_URL);
     await preloadAllVideoDurations();
     buildPlaytimeRankingData();
+    console.log("playtimeRankingData built:", playtimeRankingData.length);
+    
     handleMembersLoaded();
   } catch (err) {
     console.error("Papa Parse member CSV error:", err);
