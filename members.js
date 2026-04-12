@@ -9,6 +9,8 @@ document.addEventListener("DOMContentLoaded", () => {
   let raceData = [];
   let currentMemberRunRows = [];
   let currentMemberRunIndex = -1;
+  let videoDurationMap = new Map();
+  let playtimeRankingData = [];
 
   const IS_LOCAL =
   window.location.hostname === "127.0.0.1" ||
@@ -858,6 +860,130 @@ function parseTimestampToSeconds(timestamp) {
   return 0;
 }
 
+function extractYouTubeId(input) {
+  const raw = String(input || "").trim();
+  if (!raw) return "";
+
+  try {
+    const url = new URL(raw);
+
+    if (url.hostname.includes("youtu.be")) {
+      return url.pathname.split("/").filter(Boolean)[0] || "";
+    }
+
+    if (url.hostname.includes("youtube.com")) {
+      if (url.pathname === "/watch") {
+        return url.searchParams.get("v") || "";
+      }
+      if (url.pathname.startsWith("/embed/")) {
+        return url.pathname.split("/embed/")[1]?.split("/")[0] || "";
+      }
+      if (url.pathname.startsWith("/shorts/")) {
+        return url.pathname.split("/shorts/")[1]?.split("/")[0] || "";
+      }
+      if (url.pathname.startsWith("/live/")) {
+        return url.pathname.split("/live/")[1]?.split("/")[0] || "";
+      }
+    }
+  } catch {
+    return "";
+  }
+
+  return "";
+}
+
+function chunkArray(items, size) {
+  const chunks = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+  return chunks;
+}
+
+async function preloadAllVideoDurations() {
+  const ids = new Set();
+
+  allRows.forEach(row => {
+    const id1 = extractYouTubeId(row.VIDEOURL);
+    const id2 = extractYouTubeId(row.VIDEOURL2);
+    if (id1) ids.add(id1);
+    if (id2) ids.add(id2);
+  });
+
+  const chunks = chunkArray([...ids], 50);
+
+  for (const chunk of chunks) {
+    try {
+      const response = await fetch(
+        `/api/youtube-durations?ids=${encodeURIComponent(chunk.join(","))}`
+      );
+      if (!response.ok) continue;
+
+      const data = await response.json();
+      const videos = data.videos || {};
+
+      Object.entries(videos).forEach(([id, info]) => {
+        if (info && typeof info.duration_seconds === "number") {
+          videoDurationMap.set(id, info.duration_seconds);
+        }
+      });
+    } catch {}
+  }
+}
+
+function getRowsWithVodForRunner(memberName) {
+  return allRows.filter(row => {
+    if (!rowIncludesRunner(row, memberName)) return false;
+    return !!extractYouTubeId(row.VIDEOURL);
+  });
+}
+
+function buildPlaytimeRankingData() {
+  const members = getUniqueMemberNames();
+
+  playtimeRankingData = members.map(name => {
+    let totalSeconds = 0;
+
+    getRowsWithVodForRunner(name).forEach(row => {
+      const id = extractYouTubeId(row.VIDEOURL);
+      const seconds = id ? videoDurationMap.get(id) : null;
+      if (typeof seconds === "number") {
+        totalSeconds += seconds;
+      }
+    });
+
+    return {
+      name,
+      value: totalSeconds
+    };
+  })
+  .filter(item => item.value > 0)
+  .sort((a, b) => b.value - a.value);
+}
+
+function getTotalPlaytimeStatsForRunner(memberName) {
+  const totalAllSeconds = playtimeRankingData.reduce((sum, item) => sum + item.value, 0);
+
+  const runnerEntry = playtimeRankingData.find(
+    item => normalizeHandle(item.name) === normalizeHandle(memberName)
+  );
+
+  const totalSeconds = runnerEntry ? runnerEntry.value : 0;
+  const rank = runnerEntry
+    ? playtimeRankingData.findIndex(item => normalizeHandle(item.name) === normalizeHandle(memberName)) + 1
+    : null;
+
+  const percentOfAll = totalAllSeconds > 0 ? (totalSeconds / totalAllSeconds) * 100 : 0;
+
+  return {
+    totalSeconds,
+    totalDisplay: totalSeconds > 0 ? formatSecondsAsTime(totalSeconds) : "—",
+    percentOfAll,
+    rank,
+    totalRunners: playtimeRankingData.length
+  };
+}
+
 function getYouTubeEmbedUrl(url, timestamp) {
   const raw = String(url || "").trim();
   if (!raw) return "";
@@ -1660,7 +1786,7 @@ function getRacesForRunner(memberName) {
 
 async function renderMemberSummary(memberName) {
   const summary = buildMemberSummary(memberName);
-  const playtimeStats = await getTotalPlaytimeStatsForRunner(memberName);
+  const playtimeStats = getTotalPlaytimeStatsForRunner(memberName);
 
   const wrap = document.createElement("div");
   wrap.className = "sc-member-summary-wrap";
@@ -2141,6 +2267,8 @@ function renderMemberCommentaryTable(memberName) {
     raceData = buildRaceDatabase(extraRows);
 
     allRows = await loadCsv(CSV_URL);
+    await preloadAllVideoDurations();
+    buildPlaytimeRankingData();
     handleMembersLoaded();
   } catch (err) {
     console.error("Papa Parse member CSV error:", err);
