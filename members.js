@@ -1899,31 +1899,6 @@ async function renderMemberSummary(memberName) {
   setupMemberVisuals(visualCard, memberName);
 }
 
-async function getTotalPlaytimeStatsForRunner(memberName) {
-  const ranking = await buildPlaytimeRankingData();
-  const totalAllSeconds = ranking.reduce((sum, item) => sum + item.value, 0);
-
-  const runnerEntry = ranking.find(
-    item => normalizeHandle(item.name) === normalizeHandle(memberName)
-  );
-
-  const totalSeconds = runnerEntry ? runnerEntry.value : 0;
-  const rank = runnerEntry
-    ? ranking.findIndex(item => normalizeHandle(item.name) === normalizeHandle(memberName)) + 1
-    : null;
-
-  const percentOfAll =
-    totalAllSeconds > 0 ? (totalSeconds / totalAllSeconds) * 100 : 0;
-
-  return {
-    totalSeconds,
-    totalDisplay: totalSeconds > 0 ? formatSecondsAsTime(totalSeconds) : "—",
-    percentOfAll,
-    rank,
-    totalRunners: ranking.length
-  };
-}
-
 function renderMemberRunsTable(memberName) {
   const normalRows = allRows.filter(row => rowIncludesRunner(row, memberName));
   const memberRaces = getRacesForRunner(memberName);
