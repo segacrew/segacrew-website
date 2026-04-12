@@ -906,12 +906,19 @@ function chunkArray(items, size) {
 async function preloadAllVideoDurations() {
   const ids = new Set();
 
+  // Main runs database
   allRows.forEach(row => {
     const id1 = extractYouTubeId(row.VIDEOURL);
     const id2 = extractYouTubeId(row.VIDEOURL2);
 
     if (id1) ids.add(id1);
     if (id2) ids.add(id2);
+  });
+
+  // Races database
+  raceData.forEach(race => {
+    const raceId = extractYouTubeId(race.videoUrl);
+    if (raceId) ids.add(raceId);
   });
 
   const chunks = chunkArray([...ids], 50);
@@ -945,12 +952,19 @@ function getRowsWithVodForRunner(memberName) {
   });
 }
 
+function getRaceVodRowsForRunner(memberName) {
+  return getRacesForRunner(memberName).filter(race => {
+    return !!extractYouTubeId(race.videoUrl);
+  });
+}
+
 function buildPlaytimeRankingData() {
   const members = getUniqueMemberNames();
 
   const ranking = members.map(name => {
     let totalSeconds = 0;
 
+    // Main runs database
     getRowsWithVodForRunner(name).forEach(row => {
       const id1 = extractYouTubeId(row.VIDEOURL);
       const id2 = extractYouTubeId(row.VIDEOURL2);
@@ -961,6 +975,15 @@ function buildPlaytimeRankingData() {
 
       if (id2 && typeof videoDurationMap.get(id2) === "number") {
         totalSeconds += videoDurationMap.get(id2);
+      }
+    });
+
+    // Races database
+    getRaceVodRowsForRunner(name).forEach(race => {
+      const raceId = extractYouTubeId(race.videoUrl);
+
+      if (raceId && typeof videoDurationMap.get(raceId) === "number") {
+        totalSeconds += videoDurationMap.get(raceId);
       }
     });
 
@@ -1847,13 +1870,16 @@ async function renderMemberSummary(memberName) {
       
       <div class="sc-member-stat sc-member-stat-full">
   <p class="sc-member-stat-label">Total Playtime*</p>
-  <p class="sc-member-stat-value">${escapeHtml(playtimeStats.totalDisplay)}</p>
+  <p class="sc-member-stat-value">
+    ${escapeHtml(playtimeStats.totalDisplay)}
+  </p>
   <p class="sc-member-stat-sub">
-    ${
-      playtimeStats.totalSeconds > 0
-        ? `${playtimeStats.percentOfAll.toFixed(1)}% of all runner VOD playtime • ${playtimeStats.rank ? getOrdinal(playtimeStats.rank) : "—"} of ${playtimeStats.totalRunners}`
-        : "No VOD playtime available"
-    }
+    ${playtimeStats.rank
+      ? `${escapeHtml(getOrdinal(playtimeStats.rank))} most (${playtimeStats.percentOfAll.toFixed(1)}% of all tracked playtime)`
+      : "—"}
+  </p>
+  <p class="sc-member-stat-footnote">
+    *for available VODs
   </p>
 </div>
       
