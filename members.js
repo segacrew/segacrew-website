@@ -906,9 +906,12 @@ async function preloadAllVideoDurations() {
   allRows.forEach(row => {
     const id1 = extractYouTubeId(row.VIDEOURL);
     const id2 = extractYouTubeId(row.VIDEOURL2);
+
     if (id1) ids.add(id1);
     if (id2) ids.add(id2);
   });
+
+  console.log("Unique YouTube IDs found:", ids.size);
 
   const chunks = chunkArray([...ids], 50);
 
@@ -917,7 +920,11 @@ async function preloadAllVideoDurations() {
       const response = await fetch(
         `/api/youtube-durations?ids=${encodeURIComponent(chunk.join(","))}`
       );
-      if (!response.ok) continue;
+
+      if (!response.ok) {
+        console.log("youtube-durations fetch failed:", response.status);
+        continue;
+      }
 
       const data = await response.json();
       const videos = data.videos || {};
@@ -927,14 +934,19 @@ async function preloadAllVideoDurations() {
           videoDurationMap.set(id, info.duration_seconds);
         }
       });
-    } catch {}
+    } catch (err) {
+      console.log("youtube-durations error:", err);
+    }
   }
+
+  console.log("Loaded durations:", videoDurationMap.size);
 }
 
 function getRowsWithVodForRunner(memberName) {
   return allRows.filter(row => {
     if (!rowIncludesRunner(row, memberName)) return false;
-    return !!extractYouTubeId(row.VIDEOURL);
+
+    return !!extractYouTubeId(row.VIDEOURL) || !!extractYouTubeId(row.VIDEOURL2);
   });
 }
 
@@ -945,10 +957,15 @@ function buildPlaytimeRankingData() {
     let totalSeconds = 0;
 
     getRowsWithVodForRunner(name).forEach(row => {
-      const id = extractYouTubeId(row.VIDEOURL);
-      const seconds = id ? videoDurationMap.get(id) : null;
-      if (typeof seconds === "number") {
-        totalSeconds += seconds;
+      const id1 = extractYouTubeId(row.VIDEOURL);
+      const id2 = extractYouTubeId(row.VIDEOURL2);
+
+      if (id1 && typeof videoDurationMap.get(id1) === "number") {
+        totalSeconds += videoDurationMap.get(id1);
+      }
+
+      if (id2 && typeof videoDurationMap.get(id2) === "number") {
+        totalSeconds += videoDurationMap.get(id2);
       }
     });
 
@@ -959,6 +976,8 @@ function buildPlaytimeRankingData() {
   })
   .filter(item => item.value > 0)
   .sort((a, b) => b.value - a.value);
+
+  console.log("Computed playtimeRankingData size:", playtimeRankingData.length);
 }
 
 function getTotalPlaytimeStatsForRunner(memberName) {
@@ -1925,10 +1944,13 @@ function extractYouTubeId(input) {
       }
     }
   } catch {
-    return "";
   }
 
-  return "";
+  const match = raw.match(
+    /(?:youtu\.be\/|youtube\.com\/watch\?v=|youtube\.com\/embed\/|youtube\.com\/shorts\/|youtube\.com\/live\/)([A-Za-z0-9_-]{11})/
+  );
+
+  return match ? match[1] : "";
 }
 
 function getRowsWithVodForRunner(memberName) {
