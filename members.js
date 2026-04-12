@@ -124,21 +124,39 @@ const nextBtn = modal.querySelector(".sc-modal-next");
     return String(value || "").trim().toLowerCase();
   }
 
-  function getUniqueMemberNames(rows) {
-    const names = new Set();
+function getUniqueMemberNames() {
+  const nameMap = new Map(); // key = normalized, value = display name
 
-    rows.forEach(row => {
-      for (let i = 1; i <= 16; i++) {
-        const runner = normalizeName(row[`RUNNER${i}`]);
-        const commentary = normalizeName(row[`COMMENTARY${i}`]);
+  function addName(name) {
+    const clean = normalizeName(name);
+    if (!clean) return;
 
-        if (runner) names.add(runner);
-        if (commentary) names.add(commentary);
-      }
-    });
+    const key = clean.toLowerCase();
 
-    return [...names].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+    if (!nameMap.has(key)) {
+      nameMap.set(key, clean);
+    }
   }
+
+  // --- main database ---
+  allRows.forEach(row => {
+    for (let i = 1; i <= 16; i++) {
+      addName(row[`RUNNER${i}`]);
+      addName(row[`COMMENTARY${i}`]);
+    }
+  });
+
+  // --- race database ---
+  raceData.forEach(race => {
+    race.runners.forEach(runner => {
+      addName(runner.name);
+    });
+  });
+
+  return [...nameMap.values()].sort((a, b) =>
+    a.localeCompare(b, undefined, { sensitivity: "base" })
+  );
+}
 
   function makePlaceholder(name) {
     const div = document.createElement("div");
@@ -312,12 +330,21 @@ function getMemberRows(memberName) {
 
 function getMostPopularGamesData(memberName) {
   const memberRows = getMemberRows(memberName);
+  const memberRaces = getRacesForRunner(memberName);
   const gameCounts = new Map();
 
   memberRows.forEach(row => {
     const game = normalizeName(row.GAME);
     if (!game) return;
     gameCounts.set(game, (gameCounts.get(game) || 0) + 1);
+  });
+
+  memberRaces.forEach(race => {
+    race.games.forEach(game => {
+      const cleanGame = normalizeName(game);
+      if (!cleanGame) return;
+      gameCounts.set(cleanGame, (gameCounts.get(cleanGame) || 0) + 1);
+    });
   });
 
   const sortedGames = [...gameCounts.entries()]
@@ -340,12 +367,24 @@ function getMostPopularGamesData(memberName) {
 
 function getMostPlayedConsolesData(memberName) {
   const memberRows = getMemberRows(memberName);
+  const memberRaces = getRacesForRunner(memberName);
   const consoleCounts = new Map();
 
   memberRows.forEach(row => {
     const consoleName = normalizeName(row.CONSOLE);
     if (!consoleName) return;
     consoleCounts.set(consoleName, (consoleCounts.get(consoleName) || 0) + 1);
+  });
+
+  memberRaces.forEach(race => {
+    const raceConsole = getConsoleForRace(race);
+    if (!raceConsole) return;
+
+    race.games.forEach(game => {
+      const cleanGame = normalizeName(game);
+      if (!cleanGame) return;
+      consoleCounts.set(raceConsole, (consoleCounts.get(raceConsole) || 0) + 1);
+    });
   });
 
   const sortedConsoles = [...consoleCounts.entries()]
@@ -364,6 +403,20 @@ function destroyMemberChart() {
     currentMemberChart.destroy();
     currentMemberChart = null;
   }
+}
+
+function getConsoleForRace(race) {
+  const eventName = normalizeName(race.eventName).toLowerCase();
+
+  if (eventName.includes("sega 8")) return "Genesis";
+  if (eventName.includes("mega 16")) return "Genesis";
+  if (eventName.includes("sega 16")) return "Genesis";
+  if (eventName.includes("master 8")) return "Master System";
+  if (eventName.includes("5g game gear")) return "Game Gear";
+  if (eventName.includes("saturn8lia")) return "Saturn";
+  if (eventName.includes("shinobi")) return "Genesis";
+
+  return "";
 }
 
 function getRacePlacements(race) {
@@ -394,7 +447,6 @@ function getRaceStatsForRunner(memberName) {
   let racesWon = 0;
   let podiumFinishes = 0;
   let totalPlace = 0;
-  let totalFieldSize = 0;
   let countedRaces = 0;
   let totalRaceSeconds = 0;
   let completedRaces = 0;
@@ -410,7 +462,6 @@ function getRaceStatsForRunner(memberName) {
 
     countedRaces++;
     totalPlace += runnerResult.place;
-    totalFieldSize += runnerResult.fieldSize;
 
     if (runnerResult.place === 1) racesWon++;
     if (runnerResult.place <= 3) podiumFinishes++;
@@ -422,24 +473,96 @@ function getRaceStatsForRunner(memberName) {
   });
 
   return {
-    racesWon,
-    podiumFinishes,
-    averageFinishText:
-      countedRaces > 0
-        ? `${(totalPlace / countedRaces).toFixed(2)} / ${(totalFieldSize / countedRaces).toFixed(2)}`
-        : "—",
-    averageFinishValue:
-      countedRaces > 0 ? totalPlace / countedRaces : null,
+  racesWon,
+  podiumFinishes,
+  averageFinishText:
+    countedRaces > 0
+      ? `${(totalPlace / countedRaces).toFixed(2)}`
+      : "—",
+  averageFinishValue:
+    countedRaces > 0 ? totalPlace / countedRaces : null,
+  totalRaces: countedRaces,
+  averageRaceTimeSeconds:
+    completedRaces > 0 ? totalRaceSeconds / completedRaces : null,
+  averageRaceTimeDisplay:
+    completedRaces > 0
+      ? formatSecondsAsTime(totalRaceSeconds / completedRaces)
+      : "—",
+  completedRaces
+};
+}
+
+function getRaceGroupKey(race) {
+  const eventName = normalizeName(race.eventName).toLowerCase();
+
+  if (eventName.includes("master 8")) {
+    return "master8";
+  }
+
+  if (eventName.includes("sega 8") || eventName.includes("sega 16")) {
+    return "sega8sega16";
+  }
+
+  if (eventName.includes("5g game gear")) {
+    return "5ggamegear";
+  }
+
+  return "";
+}
+
+function getRaceGroupLabel(groupKey) {
+  if (groupKey === "master8") return "MASTER 8";
+  if (groupKey === "sega8sega16") return "SEGA 8 / SEGA 16";
+  if (groupKey === "5ggamegear") return "5G GAME GEAR";
+  return "";
+}
+
+function getGroupedRaceTimeStatsForRunner(memberName, groupKey) {
+  const memberRaces = getRacesForRunner(memberName).filter(race => {
+    if (EXCLUDED_RACE_KEYS.has(race.key)) return false;
+    return getRaceGroupKey(race) === groupKey;
+  });
+
+  let totalRaceSeconds = 0;
+  let completedRaces = 0;
+
+  memberRaces.forEach(race => {
+    const placements = getRacePlacements(race);
+    const runnerResult = placements.find(
+      p => normalizeHandle(p.name) === normalizeHandle(memberName)
+    );
+
+    if (!runnerResult) return;
+
+    if (!runnerResult.isDNF && runnerResult.seconds !== null) {
+      totalRaceSeconds += runnerResult.seconds;
+      completedRaces++;
+    }
+  });
+
+  return {
+    completedRaces,
     averageRaceTimeSeconds:
-  completedRaces > 0 ? totalRaceSeconds / completedRaces : null,
-
-averageRaceTimeDisplay:
-  completedRaces > 0
-    ? formatSecondsAsTime(totalRaceSeconds / completedRaces)
-    : "—",
-
-completedRaces
+      completedRaces > 0 ? totalRaceSeconds / completedRaces : null,
+    averageRaceTimeDisplay:
+      completedRaces > 0
+        ? formatSecondsAsTime(totalRaceSeconds / completedRaces)
+        : "—"
   };
+}
+
+function buildGroupedAverageRaceTimeRankingData(groupKey) {
+  return getAllRaceRunners().map(name => {
+    const stats = getGroupedRaceTimeStatsForRunner(name, groupKey);
+
+    return {
+      name,
+      value: stats.averageRaceTimeSeconds,
+      completedRaces: stats.completedRaces
+    };
+  })
+  .filter(item => item.value !== null && item.completedRaces >= 2)
+  .sort((a, b) => a.value - b.value);
 }
 
 function getAllRaceRunners() {
@@ -470,25 +593,19 @@ function buildRacePodiumRankingData() {
 }
 
 function buildAverageFinishRankingData() {
-  return getAllRaceRunners().map(name => ({
-    name,
-    value: getRaceStatsForRunner(name).averageFinishValue
-  }))
-  .filter(item => item.value !== null)
+  return getAllRaceRunners().map(name => {
+    const stats = getRaceStatsForRunner(name);
+
+    return {
+      name,
+      value: stats.averageFinishValue,
+      raceCount: stats.totalRaces
+    };
+  })
+  .filter(item => item.value !== null && item.raceCount >= 2)
   .sort((a, b) => a.value - b.value);
 }
 
-function buildAverageRaceTimeRankingData() {
-  return getAllRaceRunners().map(name => {
-    const stats = getRaceStatsForRunner(name);
-    return {
-      name,
-      value: stats.averageRaceTimeSeconds
-    };
-  })
-  .filter(item => item.value !== null)
-  .sort((a, b) => a.value - b.value); // LOWER is better
-}
 
 function getMedalCircle(rank) {
   if (rank === 1) return `<span class="sc-race-medal sc-race-medal-gold"></span>`;
@@ -503,18 +620,49 @@ function renderRaceStatsView(container, memberName) {
   const winsRanking = buildRaceWinsRankingData();
   const podiumRanking = buildRacePodiumRankingData();
   const avgFinishRanking = buildAverageFinishRankingData();
-  const avgRaceTimeRanking = buildAverageRaceTimeRankingData();
-  const avgRaceTimeRank = getRankForMember(avgRaceTimeRanking, memberName);
+
+  const master8Ranking = buildGroupedAverageRaceTimeRankingData("master8");
+  const sega8sega16Ranking = buildGroupedAverageRaceTimeRankingData("sega8sega16");
+  const gameGearRanking = buildGroupedAverageRaceTimeRankingData("5ggamegear");
+
+  const master8Stats = getGroupedRaceTimeStatsForRunner(memberName, "master8");
+  const sega8sega16Stats = getGroupedRaceTimeStatsForRunner(memberName, "sega8sega16");
+  const gameGearStats = getGroupedRaceTimeStatsForRunner(memberName, "5ggamegear");
 
   const winsRankInfo = getTieAwareRank(winsRanking, memberName);
   const podiumRankInfo = getTieAwareRank(podiumRanking, memberName);
   const avgFinishRank = getRankForMember(avgFinishRanking, memberName);
 
+  const master8Rank = getRankForMember(master8Ranking, memberName);
+  const sega8sega16Rank = getRankForMember(sega8sega16Ranking, memberName);
+  const gameGearRank = getRankForMember(gameGearRanking, memberName);
+
+  function renderRaceTimeBox(label, statsObj, rank) {
+  return `
+    <div class="sc-member-ranking-box">
+      <div class="sc-member-ranking-label">${escapeHtml(label)}</div>
+      <div class="sc-member-ranking-value">
+        ${rank ? getMedalCircle(rank) : ""}
+        ${escapeHtml(statsObj.averageRaceTimeDisplay)}
+      </div>
+      <div class="sc-member-ranking-sub">
+        ${
+  statsObj.completedRaces >= 2
+    ? `${rank ? `${escapeHtml(getOrdinal(rank))} fastest average` : "Rank unavailable"} (${escapeHtml(String(statsObj.completedRaces))} races)`
+    : "Minimum 2 races required"
+}
+      </div>
+    </div>
+  `;
+}
+
   container.innerHTML = `
     <div class="sc-member-rankings-grid">
       <div class="sc-member-ranking-box">
         <div class="sc-member-ranking-label">RACES WON</div>
-        <div class="sc-member-ranking-value">${escapeHtml(String(stats.racesWon))}</div>
+        <div class="sc-member-ranking-value">
+			${winsRankInfo ? getMedalCircle(winsRankInfo.rank) : ""}
+			${escapeHtml(String(stats.racesWon))}</div>
         <div class="sc-member-ranking-sub">
           ${winsRankInfo ? `${winsRankInfo.tied ? "Tied for " : ""}${escapeHtml(getOrdinal(winsRankInfo.rank))} most` : "—"}
         </div>
@@ -522,33 +670,34 @@ function renderRaceStatsView(container, memberName) {
 
       <div class="sc-member-ranking-box">
         <div class="sc-member-ranking-label">PODIUM FINISHES</div>
-        <div class="sc-member-ranking-value">${escapeHtml(String(stats.podiumFinishes))}</div>
+        <div class="sc-member-ranking-value">
+			${podiumRankInfo ? getMedalCircle(podiumRankInfo.rank) : ""}
+			${escapeHtml(String(stats.podiumFinishes))}</div>
         <div class="sc-member-ranking-sub">
           ${podiumRankInfo ? `${podiumRankInfo.tied ? "Tied for " : ""}${escapeHtml(getOrdinal(podiumRankInfo.rank))} most` : "—"}
         </div>
       </div>
 
       <div class="sc-member-ranking-box">
-        <div class="sc-member-ranking-label">AVERAGE RACE FINISH</div>
-        <div class="sc-member-ranking-value">
-          ${avgFinishRank ? getMedalCircle(avgFinishRank) : ""}
-          ${escapeHtml(stats.averageFinishText)}
-        </div>
-        <div class="sc-member-ranking-sub">
-          ${avgFinishRank ? `${escapeHtml(getOrdinal(avgFinishRank))} best average` : "—"}
-        </div>
-      </div>
-
-      <div class="sc-member-ranking-box">
-  <div class="sc-member-ranking-label">AVERAGE RACE TIME</div>
+  <div class="sc-member-ranking-label">AVERAGE RACE FINISH</div>
   <div class="sc-member-ranking-value">
-    ${avgRaceTimeRank ? getMedalCircle(avgRaceTimeRank) : ""}
-    ${escapeHtml(stats.averageRaceTimeDisplay)}
+    ${avgFinishRank ? getMedalCircle(avgFinishRank) : ""}
+    ${escapeHtml(stats.averageFinishText)}
   </div>
   <div class="sc-member-ranking-sub">
-    ${avgRaceTimeRank ? `${escapeHtml(getOrdinal(avgRaceTimeRank))} fastest average` : "—"}
+    ${
+      stats.totalRaces >= 2
+        ? (avgFinishRank
+            ? `${escapeHtml(getOrdinal(avgFinishRank))} best average`
+            : "Rank unavailable")
+        : "Minimum 2 races required"
+    }
   </div>
 </div>
+
+      ${renderRaceTimeBox("AVERAGE MASTER 8 TIME", master8Stats, master8Rank)}
+      ${renderRaceTimeBox("AVERAGE SEGA 8/16 TIME", sega8sega16Stats, sega8sega16Rank)}
+      ${renderRaceTimeBox("AVERAGE 5G GAME GEAR TIME", gameGearStats, gameGearRank)}
     </div>
   `;
 }
@@ -1029,7 +1178,7 @@ function getOrdinal(n) {
 }
 
 function buildRunsRankingData() {
-  const members = getAllRunnerNames(allRows);
+  const members = getUniqueMemberNames();
 
   return members.map(name => ({
     name,
@@ -1039,15 +1188,26 @@ function buildRunsRankingData() {
 }
 
 function buildUniqueGamesRankingData() {
-  const members = getAllRunnerNames(allRows);
+  const members = getUniqueMemberNames();
 
   return members.map(name => {
-    const rows = allRows.filter(row => rowIncludesRunner(row, name));
     const games = new Set();
 
-    rows.forEach(row => {
-      const game = normalizeName(row.GAME);
-      if (game) games.add(game);
+    // runs database
+    allRows.forEach(row => {
+      if (rowIncludesRunner(row, name)) {
+        const game = normalizeName(row.GAME);
+        if (game) games.add(game);
+      }
+    });
+
+    // Races database
+    const memberRaces = getRacesForRunner(name);
+    memberRaces.forEach(race => {
+      race.games.forEach(game => {
+        const cleanGame = normalizeName(game);
+        if (cleanGame) games.add(cleanGame);
+      });
     });
 
     return {
@@ -1334,12 +1494,33 @@ function setupMemberVisuals(visualCard, memberName) {
   return null;
 }
 
+function normalizeRaceGameId(gameId) {
+  const raw = normalizeName(gameId).toUpperCase();
+  if (!raw) return "";
+
+  return raw.replace(/[A-Z]+$/, "");
+}
+
+function getRaceGameDedupKey(row) {
+  const gameId = normalizeName(row.GAMEID);
+  const game = normalizeName(row.GAME);
+
+  if (gameId) {
+    const normalizedId = normalizeRaceGameId(gameId);
+    if (normalizedId) return normalizedId;
+  }
+
+  return game;
+}
+
 function buildRaceDatabase(rows) {
   const races = [];
   let currentRace = null;
+  let currentRaceSeenGameKeys = new Set();
 
   rows.forEach(row => {
     const eventId = normalizeName(row.EVENTID);
+    const key = normalizeName(row.KEY);
     const eventName = normalizeName(row.EVENT);
     const game = normalizeName(row.GAME);
     const videoUrl = normalizeName(row.VIDEOURL);
@@ -1368,21 +1549,26 @@ function buildRaceDatabase(rows) {
         }
       }
 
-      const key = normalizeName(row.KEY);
+      currentRace = {
+        eventId,
+        key,
+        eventName,
+        date,
+        videoUrl,
+        runners,
+        games: []
+      };
 
-currentRace = {
-  eventId,
-  key,
-  eventName,
-  date,
-  videoUrl,
-  runners,
-  games: []
-};
+      currentRaceSeenGameKeys = new Set();
     }
 
     if (currentRace && game) {
-      currentRace.games.push(game);
+      const dedupKey = getRaceGameDedupKey(row);
+
+      if (!currentRaceSeenGameKeys.has(dedupKey)) {
+        currentRace.games.push(game);
+        currentRaceSeenGameKeys.add(dedupKey);
+      }
     }
   });
 
@@ -1457,7 +1643,7 @@ function getRacesForRunner(memberName) {
 
   wrap.appendChild(card);
   content.appendChild(wrap);
-  renderMemberSummary(name);
+  await renderMemberSummary(name);
   renderMemberRunsTable(name);
   renderMemberCommentaryTable(name);
 
@@ -1472,8 +1658,9 @@ function getRacesForRunner(memberName) {
   }
 }
 
-function renderMemberSummary(memberName) {
+async function renderMemberSummary(memberName) {
   const summary = buildMemberSummary(memberName);
+  const playtimeStats = await getTotalPlaytimeStatsForRunner(memberName);
 
   const wrap = document.createElement("div");
   wrap.className = "sc-member-summary-wrap";
@@ -1513,6 +1700,19 @@ function renderMemberSummary(memberName) {
         <p class="sc-member-stat-label">Total Races</p>
         <p class="sc-member-stat-value">${escapeHtml(summary.totalRaces)}</p>
       </div>
+      
+      <div class="sc-member-stat sc-member-stat-full">
+  <p class="sc-member-stat-label">Total Playtime*</p>
+  <p class="sc-member-stat-value">${escapeHtml(playtimeStats.totalDisplay)}</p>
+  <p class="sc-member-stat-sub">
+    ${
+      playtimeStats.totalSeconds > 0
+        ? `${playtimeStats.percentOfAll.toFixed(1)}% of all runner VOD playtime • ${playtimeStats.rank ? getOrdinal(playtimeStats.rank) : "—"} of ${playtimeStats.totalRunners}`
+        : "No VOD playtime available"
+    }
+  </p>
+</div>
+      
     </div>
   `;
 
@@ -1553,6 +1753,149 @@ function renderMemberSummary(memberName) {
   content.appendChild(wrap);
 
   setupMemberVisuals(visualCard, memberName);
+}
+
+async function getYouTubeDuration(videoUrl) {
+  try {
+    const response = await fetch(
+      `/api/youtube-duration?url=${encodeURIComponent(videoUrl)}`
+    );
+
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    return data.duration_display || null;
+  } catch {
+    return null;
+  }
+}
+
+function extractYouTubeId(input) {
+  const raw = String(input || "").trim();
+  if (!raw) return "";
+
+  try {
+    const url = new URL(raw);
+
+    if (url.hostname.includes("youtu.be")) {
+      return url.pathname.split("/").filter(Boolean)[0] || "";
+    }
+
+    if (url.hostname.includes("youtube.com")) {
+      if (url.pathname === "/watch") {
+        return url.searchParams.get("v") || "";
+      }
+
+      if (url.pathname.startsWith("/embed/")) {
+        return url.pathname.split("/embed/")[1]?.split("/")[0] || "";
+      }
+
+      if (url.pathname.startsWith("/shorts/")) {
+        return url.pathname.split("/shorts/")[1]?.split("/")[0] || "";
+      }
+
+      if (url.pathname.startsWith("/live/")) {
+        return url.pathname.split("/live/")[1]?.split("/")[0] || "";
+      }
+    }
+  } catch {
+    return "";
+  }
+
+  return "";
+}
+
+function getRowsWithVodForRunner(memberName) {
+  return allRows.filter(row => {
+    if (!rowIncludesRunner(row, memberName)) return false;
+    return !!extractYouTubeId(row.VIDEOURL);
+  });
+}
+
+async function getVideoDurationSeconds(videoUrl) {
+  try {
+    const response = await fetch(
+      `/api/youtube-duration?url=${encodeURIComponent(videoUrl)}`
+    );
+
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    return typeof data.duration_seconds === "number" ? data.duration_seconds : null;
+  } catch {
+    return null;
+  }
+}
+
+const youtubeDurationCache = new Map();
+
+async function getCachedVideoDurationSeconds(videoUrl) {
+  const videoId = extractYouTubeId(videoUrl);
+  if (!videoId) return null;
+
+  if (youtubeDurationCache.has(videoId)) {
+    return youtubeDurationCache.get(videoId);
+  }
+
+  const seconds = await getVideoDurationSeconds(videoUrl);
+  youtubeDurationCache.set(videoId, seconds);
+  return seconds;
+}
+
+async function getTotalPlaytimeSecondsForRunner(memberName) {
+  const rows = getRowsWithVodForRunner(memberName);
+  let totalSeconds = 0;
+
+  for (const row of rows) {
+    const seconds = await getCachedVideoDurationSeconds(row.VIDEOURL);
+    if (seconds !== null) {
+      totalSeconds += seconds;
+    }
+  }
+
+  return totalSeconds;
+}
+
+async function buildPlaytimeRankingData() {
+  const members = getUniqueMemberNames();
+  const ranking = [];
+
+  for (const name of members) {
+    const totalSeconds = await getTotalPlaytimeSecondsForRunner(name);
+    ranking.push({
+      name,
+      value: totalSeconds
+    });
+  }
+
+  return ranking
+    .filter(item => item.value > 0)
+    .sort((a, b) => b.value - a.value);
+}
+
+async function getTotalPlaytimeStatsForRunner(memberName) {
+  const ranking = await buildPlaytimeRankingData();
+  const totalAllSeconds = ranking.reduce((sum, item) => sum + item.value, 0);
+
+  const runnerEntry = ranking.find(
+    item => normalizeHandle(item.name) === normalizeHandle(memberName)
+  );
+
+  const totalSeconds = runnerEntry ? runnerEntry.value : 0;
+  const rank = runnerEntry
+    ? ranking.findIndex(item => normalizeHandle(item.name) === normalizeHandle(memberName)) + 1
+    : null;
+
+  const percentOfAll =
+    totalAllSeconds > 0 ? (totalSeconds / totalAllSeconds) * 100 : 0;
+
+  return {
+    totalSeconds,
+    totalDisplay: totalSeconds > 0 ? formatSecondsAsTime(totalSeconds) : "—",
+    percentOfAll,
+    rank,
+    totalRunners: ranking.length
+  };
 }
 
 function renderMemberRunsTable(memberName) {
@@ -1735,7 +2078,7 @@ function renderMemberCommentaryTable(memberName) {
   }
 
   function handleMembersLoaded() {
-    const uniqueMembers = getUniqueMemberNames(allRows);
+    const uniqueMembers = getUniqueMemberNames();
 
     menu.innerHTML = "";
     trigger.textContent = "Select a member";

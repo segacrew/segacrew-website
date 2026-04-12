@@ -21,7 +21,8 @@ document.addEventListener("DOMContentLoaded", () => {
   "Golden Axe Trilogy": [
     "Golden Axe",
     "Golden Axe II",
-    "Golden Axe III"
+    "Golden Axe III",
+    "Golden Axe 3"
   ],
   "Bare Knuckle Trilogy": [
     "Bare Knuckle",
