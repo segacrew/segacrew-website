@@ -1900,20 +1900,6 @@ async function renderMemberSummary(memberName) {
   setupMemberVisuals(visualCard, memberName);
 }
 
-async function getYouTubeDuration(videoUrl) {
-  try {
-    const response = await fetch(
-      `/api/youtube-duration?url=${encodeURIComponent(videoUrl)}`
-    );
-
-    if (!response.ok) return null;
-
-    const data = await response.json();
-    return data.duration_display || null;
-  } catch {
-    return null;
-  }
-}
 
 function extractYouTubeId(input) {
   const raw = String(input || "").trim();
@@ -1958,21 +1944,6 @@ function getRowsWithVodForRunner(memberName) {
     if (!rowIncludesRunner(row, memberName)) return false;
     return !!extractYouTubeId(row.VIDEOURL);
   });
-}
-
-async function getVideoDurationSeconds(videoUrl) {
-  try {
-    const response = await fetch(
-      `/api/youtube-duration?url=${encodeURIComponent(videoUrl)}`
-    );
-
-    if (!response.ok) return null;
-
-    const data = await response.json();
-    return typeof data.duration_seconds === "number" ? data.duration_seconds : null;
-  } catch {
-    return null;
-  }
 }
 
 const youtubeDurationCache = new Map();
