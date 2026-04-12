@@ -886,7 +886,10 @@ function extractYouTubeId(input) {
       }
     }
   } catch {
-    return "";
+    const match = raw.match(
+      /(?:youtu\.be\/|youtube\.com\/watch\?v=|youtube\.com\/embed\/|youtube\.com\/shorts\/|youtube\.com\/live\/)([A-Za-z0-9_-]{11})/
+    );
+    return match ? match[1] : "";
   }
 
   return "";
@@ -911,8 +914,6 @@ async function preloadAllVideoDurations() {
     if (id2) ids.add(id2);
   });
 
-  console.log("Unique YouTube IDs found:", ids.size);
-
   const chunks = chunkArray([...ids], 50);
 
   for (const chunk of chunks) {
@@ -921,10 +922,7 @@ async function preloadAllVideoDurations() {
         `/api/youtube-durations?ids=${encodeURIComponent(chunk.join(","))}`
       );
 
-      if (!response.ok) {
-        console.log("youtube-durations fetch failed:", response.status);
-        continue;
-      }
+      if (!response.ok) continue;
 
       const data = await response.json();
       const videos = data.videos || {};
@@ -935,17 +933,14 @@ async function preloadAllVideoDurations() {
         }
       });
     } catch (err) {
-      console.log("youtube-durations error:", err);
+      console.error("youtube-durations error:", err);
     }
   }
-
-  console.log("Loaded durations:", videoDurationMap.size);
 }
 
 function getRowsWithVodForRunner(memberName) {
   return allRows.filter(row => {
     if (!rowIncludesRunner(row, memberName)) return false;
-
     return !!extractYouTubeId(row.VIDEOURL) || !!extractYouTubeId(row.VIDEOURL2);
   });
 }
@@ -976,8 +971,6 @@ function buildPlaytimeRankingData() {
   })
   .filter(item => item.value > 0)
   .sort((a, b) => b.value - a.value);
-
-  console.log("Computed playtimeRankingData size:", playtimeRankingData.length);
 }
 
 function getTotalPlaytimeStatsForRunner(memberName) {
@@ -1947,33 +1940,6 @@ function getRowsWithVodForRunner(memberName) {
 }
 
 const youtubeDurationCache = new Map();
-
-async function getCachedVideoDurationSeconds(videoUrl) {
-  const videoId = extractYouTubeId(videoUrl);
-  if (!videoId) return null;
-
-  if (youtubeDurationCache.has(videoId)) {
-    return youtubeDurationCache.get(videoId);
-  }
-
-  const seconds = await getVideoDurationSeconds(videoUrl);
-  youtubeDurationCache.set(videoId, seconds);
-  return seconds;
-}
-
-async function getTotalPlaytimeSecondsForRunner(memberName) {
-  const rows = getRowsWithVodForRunner(memberName);
-  let totalSeconds = 0;
-
-  for (const row of rows) {
-    const seconds = await getCachedVideoDurationSeconds(row.VIDEOURL);
-    if (seconds !== null) {
-      totalSeconds += seconds;
-    }
-  }
-
-  return totalSeconds;
-}
 
 async function buildPlaytimeRankingData() {
   const members = getUniqueMemberNames();
