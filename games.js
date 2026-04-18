@@ -787,7 +787,7 @@ if (topRunners.length === 1) {
       <th>EVENT</th>
       <th>DATE</th>
       <th>RUN TYPE</th>
-      <th>SPEEDRUN CATEGORY</th>
+      <th>CATEGORY</th>
       <th>RUNNER(S)</th>
     </tr>
   `;

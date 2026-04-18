@@ -1839,47 +1839,44 @@ async function renderMemberSummary(memberName) {
     <h3 class="sc-member-summary-title">RUNNER SUMMARY</h3>
     <div class="sc-member-summary-grid">
       <div class="sc-member-stat">
-        <p class="sc-member-stat-label">First Event</p>
-        <p class="sc-member-stat-value">${escapeHtml(summary.firstEvent)}</p>
+        <p class="sc-member-ranking-label">First Event</p>
+        <p class="sc-member-ranking-value text-value">${escapeHtml(summary.firstEvent)}</p>
       </div>
 
       <div class="sc-member-stat">
-        <p class="sc-member-stat-label">Most Recent Event</p>
-        <p class="sc-member-stat-value">${escapeHtml(summary.lastEvent)}</p>
+        <p class="sc-member-ranking-label">Most Recent Event</p>
+        <p class="sc-member-ranking-value text-value">${escapeHtml(summary.lastEvent)}</p>
       </div>
 
       <div class="sc-member-stat">
-        <p class="sc-member-stat-label">Most Played Game</p>
-        <p class="sc-member-stat-value">${summary.mostPlayedGameDisplay}</p>
+        <p class="sc-member-ranking-label">Most Played Game</p>
+        <p class="sc-member-ranking-value text-value">${summary.mostPlayedGameDisplay}</p>
       </div>
 
       <div class="sc-member-stat">
-        <p class="sc-member-stat-label">Most Played Console</p>
-        <p class="sc-member-stat-value">${escapeHtml(summary.mostPlayedConsole)}</p>
+        <p class="sc-member-ranking-label">Most Played Console</p>
+        <p class="sc-member-ranking-value text-value">${escapeHtml(summary.mostPlayedConsole)}</p>
       </div>
 
       <div class="sc-member-stat">
-        <p class="sc-member-stat-label">Number of Consoles Showcased</p>
-        <p class="sc-member-stat-value">${escapeHtml(String(summary.consoleShowcaseCount))}</p>
+        <p class="sc-member-ranking-label">Number of Consoles Showcased</p>
+        <p class="sc-member-ranking-value">${escapeHtml(String(summary.consoleShowcaseCount))}</p>
       </div>
 
       <div class="sc-member-stat">
-        <p class="sc-member-stat-label">Total Races</p>
-        <p class="sc-member-stat-value">${escapeHtml(summary.totalRaces)}</p>
+        <p class="sc-member-ranking-label">Total Races</p>
+        <p class="sc-member-ranking-value">${escapeHtml(summary.totalRaces)}</p>
       </div>
       
       <div class="sc-member-stat sc-member-stat-full">
-  <p class="sc-member-stat-label">Total Playtime*</p>
-  <p class="sc-member-stat-value">
+  <p class="sc-member-ranking-label">Total Playtime</p>
+  <p class="sc-member-ranking-value">
     ${escapeHtml(playtimeStats.totalDisplay)}
   </p>
-  <p class="sc-member-stat-sub">
-    ${playtimeStats.rank
-      ? `${escapeHtml(getOrdinal(playtimeStats.rank))} most (${playtimeStats.percentOfAll.toFixed(1)}% of all tracked playtime)`
-      : "—"}
-  </p>
-  <p class="sc-member-stat-footnote">
-    *for available VODs
+  <p class="sc-member-ranking-sub">
+    ${playtimeStats.totalSeconds > 0
+  ? `${playtimeStats.percentOfAll.toFixed(1)}% of total Sega Crew playtime (${playtimeStats.rank ? `${escapeHtml(getOrdinal(playtimeStats.rank))} most out of ${escapeHtml(String(playtimeStats.totalRunners))}` : "unranked"})`
+  : "No VOD playtime available"}
   </p>
 </div>
       
@@ -1989,8 +1986,8 @@ function renderMemberRunsTable(memberName) {
       <th>GAME</th>
       <th>EVENT</th>
       <th>DATE</th>
-      <th>RUNTYPE</th>
-      <th>SPEEDRUNTYPE</th>
+      <th>RUN TYPE</th>
+      <th>CATEGORY</th>
     </tr>
   `;
 
