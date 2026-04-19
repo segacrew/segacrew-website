@@ -10,12 +10,18 @@ document.addEventListener("DOMContentLoaded", () => {
   const CSV_URL = IS_LOCAL
     ? "sega crew database - master sheet.csv"
     : "https://stupendous-paletas-199024.netlify.app/sega crew database - master sheet.csv";
+    
+    const RACES_CSV_URL = IS_LOCAL
+    ? "SEGA CREW RACES - MASTER.csv"
+    : "https://stupendous-paletas-199024.netlify.app/SEGA CREW RACES - MASTER.csv";  
 
   let allRows = [];
   let currentGameRunRows = [];
   let currentGameRunIndex = -1;
   let selectedConsoleFilter = "";
   let currentGameOptions = [];
+  let raceRows = [];
+  let raceData = [];
   
   const TRILOGY_MAP = {
   "Golden Axe Trilogy": [
@@ -68,65 +74,80 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const wrapper = document.createElement("div");
   wrapper.className = "sc-page-controls";
-  
+
   const consoleLabel = document.createElement("div");
-consoleLabel.className = "sc-label";
-consoleLabel.textContent = "Filter by Console";
+  consoleLabel.className = "sc-label";
+  consoleLabel.textContent = "Optional: Filter game dropdown by console";
 
-const consoleDropdown = document.createElement("div");
-consoleDropdown.className = "sc-dropdown";
-consoleDropdown.id = "consoleDropdown";
+  const consoleDropdown = document.createElement("div");
+  consoleDropdown.className = "sc-dropdown";
+  consoleDropdown.id = "consoleDropdown";
 
-const consoleTrigger = document.createElement("button");
-consoleTrigger.type = "button";
-consoleTrigger.className = "sc-dropdown-trigger";
-consoleTrigger.setAttribute("aria-haspopup", "listbox");
-consoleTrigger.setAttribute("aria-expanded", "false");
-consoleTrigger.textContent = "All Consoles";
+  const consoleTrigger = document.createElement("button");
+  consoleTrigger.type = "button";
+  consoleTrigger.className = "sc-dropdown-trigger";
+  consoleTrigger.setAttribute("aria-haspopup", "listbox");
+  consoleTrigger.setAttribute("aria-expanded", "false");
+  consoleTrigger.textContent = "All Consoles";
 
-const consoleMenu = document.createElement("div");
-consoleMenu.className = "sc-dropdown-menu";
-consoleMenu.setAttribute("role", "listbox");
+  const consoleMenu = document.createElement("div");
+  consoleMenu.className = "sc-dropdown-menu";
+  consoleMenu.setAttribute("role", "listbox");
 
-consoleDropdown.appendChild(consoleTrigger);
-consoleDropdown.appendChild(consoleMenu);
+  const consoleSearchInput = document.createElement("input");
+  consoleSearchInput.type = "text";
+  consoleSearchInput.className = "sc-dropdown-search";
+  consoleSearchInput.placeholder = "Search consoles...";
+  consoleSearchInput.autocomplete = "off";
 
-const gameLabel = document.createElement("div");
-gameLabel.className = "sc-label";
+  const consoleItemsWrap = document.createElement("div");
+  consoleItemsWrap.className = "sc-dropdown-items";
 
-const dropdown = document.createElement("div");
-dropdown.className = "sc-dropdown";
-dropdown.id = "gameDropdown";
+  consoleMenu.appendChild(consoleSearchInput);
+  consoleMenu.appendChild(consoleItemsWrap);
+  consoleDropdown.appendChild(consoleTrigger);
+  consoleDropdown.appendChild(consoleMenu);
 
-const trigger = document.createElement("button");
-trigger.type = "button";
-trigger.className = "sc-dropdown-trigger";
-trigger.setAttribute("aria-haspopup", "listbox");
-trigger.setAttribute("aria-expanded", "false");
-trigger.textContent = "Loading games...";
+  const gameLabel = document.createElement("div");
+  gameLabel.className = "sc-label";
+  gameLabel.textContent = "Select Game";
 
-const menu = document.createElement("div");
-menu.className = "sc-dropdown-menu";
-menu.setAttribute("role", "listbox");
+  const dropdown = document.createElement("div");
+  dropdown.className = "sc-dropdown";
+  dropdown.id = "gameDropdown";
 
-dropdown.appendChild(trigger);
-dropdown.appendChild(menu);
+  const trigger = document.createElement("button");
+  trigger.type = "button";
+  trigger.className = "sc-dropdown-trigger";
+  trigger.setAttribute("aria-haspopup", "listbox");
+  trigger.setAttribute("aria-expanded", "false");
+  trigger.textContent = "Loading games...";
 
-wrapper.appendChild(consoleLabel);
-wrapper.appendChild(consoleDropdown);
-wrapper.appendChild(gameLabel);
-wrapper.appendChild(dropdown);
-controls.appendChild(wrapper);
+  const menu = document.createElement("div");
+  menu.className = "sc-dropdown-menu";
+  menu.setAttribute("role", "listbox");
 
-  const label = document.createElement("div");
-  label.className = "sc-label";
+  const gameSearchInput = document.createElement("input");
+  gameSearchInput.type = "text";
+  gameSearchInput.className = "sc-dropdown-search";
+  gameSearchInput.placeholder = "Search games...";
+  gameSearchInput.autocomplete = "off";
 
+  const gameItemsWrap = document.createElement("div");
+  gameItemsWrap.className = "sc-dropdown-items";
 
+  menu.appendChild(gameSearchInput);
+  menu.appendChild(gameItemsWrap);
   dropdown.appendChild(trigger);
   dropdown.appendChild(menu);
-  wrapper.appendChild(label);
+
+  //wrapper.appendChild(gameLabel);
   wrapper.appendChild(dropdown);
-  controls.appendChild(wrapper);
+
+  wrapper.appendChild(consoleDropdown);
+  wrapper.appendChild(consoleLabel);
+
+  controls.appendChild(wrapper);  
   
   const modal = document.createElement("div");
 modal.className = "sc-modal";
@@ -148,6 +169,84 @@ modal.innerHTML = `
 
 document.body.appendChild(modal);
 
+  const mobilePicker = document.createElement("div");
+  mobilePicker.className = "sc-mobile-picker";
+  mobilePicker.innerHTML = `
+    <div class="sc-mobile-picker-panel">
+      <div class="sc-mobile-picker-header">
+        <div class="sc-mobile-picker-title"></div>
+        <button type="button" class="sc-mobile-picker-close">Close</button>
+      </div>
+      <div class="sc-mobile-picker-body"></div>
+    </div>
+  `;
+  document.body.appendChild(mobilePicker);
+
+  const mobilePickerTitle = mobilePicker.querySelector(".sc-mobile-picker-title");
+  const mobilePickerBody = mobilePicker.querySelector(".sc-mobile-picker-body");
+  const mobilePickerClose = mobilePicker.querySelector(".sc-mobile-picker-close");
+
+  function isMobilePickerMode() {
+    return window.innerWidth <= 900;
+  }
+
+  function closeMobilePicker() {
+    mobilePicker.classList.remove("open");
+    mobilePickerTitle.textContent = "";
+    mobilePickerBody.innerHTML = "";
+    document.body.style.overflow = "";
+  }
+
+  function openMobilePicker(title, type) {
+    mobilePickerTitle.textContent = title;
+    mobilePickerBody.innerHTML = "";
+
+    const search = document.createElement("input");
+    search.type = "text";
+    search.className = "sc-dropdown-search";
+    search.placeholder = type === "console" ? "Search consoles..." : "Search games...";
+    search.autocomplete = "off";
+
+    const itemsWrap = document.createElement("div");
+    itemsWrap.className = "sc-dropdown-items";
+
+    const sourceItems = type === "console"
+      ? [...consoleItemsWrap.querySelectorAll(".sc-dropdown-item")]
+      : [...gameItemsWrap.querySelectorAll(".sc-dropdown-item")];
+
+    sourceItems.forEach(sourceItem => {
+      const clone = sourceItem.cloneNode(true);
+      clone.addEventListener("click", () => {
+        sourceItem.click();
+        closeMobilePicker();
+      });
+      itemsWrap.appendChild(clone);
+    });
+
+    search.addEventListener("input", () => {
+      const query = search.value.trim().toLowerCase();
+      itemsWrap.querySelectorAll(".sc-dropdown-item").forEach(item => {
+        const text = item.textContent.trim().toLowerCase();
+        item.style.display = text.includes(query) ? "" : "none";
+      });
+    });
+
+    mobilePickerBody.appendChild(search);
+    mobilePickerBody.appendChild(itemsWrap);
+
+    mobilePicker.classList.add("open");
+    document.body.style.overflow = "hidden";
+    search.focus();
+  }
+
+  mobilePickerClose.addEventListener("click", closeMobilePicker);
+
+  mobilePicker.addEventListener("click", (e) => {
+    if (e.target === mobilePicker) {
+      closeMobilePicker();
+    }
+  });
+
 const modalTitle = modal.querySelector("#scModalTitle");
 const modalSubtitle = modal.querySelector("#scModalSubtitle");
 const modalBody = modal.querySelector("#scModalBody");
@@ -155,17 +254,36 @@ const modalClose = modal.querySelector(".sc-modal-close");
 const prevBtn = modal.querySelector(".sc-modal-prev");
 const nextBtn = modal.querySelector(".sc-modal-next");
 
-  function closeMenu() {
+  function closeGameMenu() {
     dropdown.classList.remove("open");
     trigger.setAttribute("aria-expanded", "false");
   }
 
-  function openMenu() {
+  function openGameMenu() {
+    closeConsoleMenu();
     dropdown.classList.add("open");
     trigger.setAttribute("aria-expanded", "true");
+    gameSearchInput.value = "";
+    filterDropdownItems(gameSearchInput, gameItemsWrap);
+  }
+
+  function closeConsoleMenu() {
+    consoleDropdown.classList.remove("open");
+    consoleTrigger.setAttribute("aria-expanded", "false");
+  }
+
+  function openConsoleMenu() {
+    closeGameMenu();
+    consoleDropdown.classList.add("open");
+    consoleTrigger.setAttribute("aria-expanded", "true");
+    consoleSearchInput.value = "";
+    filterDropdownItems(consoleSearchInput, consoleItemsWrap);
+  }
+
+  function closeMenu() {
+    closeGameMenu();
   }
   
-
   function normalizeName(value) {
     return String(value || "").trim();
   }
@@ -180,6 +298,158 @@ function getMatchingTrilogyTitles(gameName) {
     .map(([trilogyTitle]) => trilogyTitle);
 }
 
+function parseRaceFinishTime(timeStr) {
+  const raw = normalizeName(timeStr);
+  if (!raw) return null;
+
+  const parts = raw.split(":").map(part => parseInt(part, 10));
+  if (parts.some(Number.isNaN)) return null;
+
+  if (parts.length === 3) {
+    const [hours, minutes, seconds] = parts;
+    return (hours * 3600) + (minutes * 60) + seconds;
+  }
+
+  if (parts.length === 2) {
+    const [minutes, seconds] = parts;
+    return (minutes * 60) + seconds;
+  }
+
+  if (parts.length === 1) {
+    return parts[0];
+  }
+
+  return null;
+}
+
+function normalizeRaceGameId(gameId) {
+  const raw = normalizeName(gameId).toUpperCase();
+  if (!raw) return "";
+  return raw.replace(/[A-Z]+$/, "");
+}
+
+function getRaceGameDedupKey(row) {
+  const gameId = normalizeName(row.GAMEID);
+  const game = normalizeName(row.GAME);
+
+  if (gameId) {
+    const normalizedId = normalizeRaceGameId(gameId);
+    if (normalizedId) return normalizedId;
+  }
+
+  return game;
+}
+
+function buildRaceDatabase(rows) {
+  const races = [];
+  let currentRace = null;
+  let currentRaceSeenGameKeys = new Set();
+
+  rows.forEach(row => {
+    const eventId = normalizeName(row.EVENTID);
+    const key = normalizeName(row.KEY);
+    const eventName = normalizeName(row.EVENT);
+    const game = normalizeName(row.GAME);
+    const videoUrl = normalizeName(row.VIDEOURL);
+    const date = normalizeName(row.DATE);
+
+    if (eventId && (!currentRace || currentRace.eventId !== eventId)) {
+      if (currentRace) {
+        races.push(currentRace);
+      }
+
+      const runners = [];
+
+      for (let i = 1; i <= 10; i++) {
+        const name = normalizeName(row[`RUNNER${i}`]);
+        const rawTime = normalizeName(row[`RUNNER${i}TIME`]);
+
+        if (name) {
+          const parsedSeconds = parseRaceFinishTime(rawTime);
+
+          runners.push({
+            name,
+            time: rawTime || "",
+            seconds: parsedSeconds,
+            isDNF: rawTime !== "" && parsedSeconds === null
+          });
+        }
+      }
+
+      currentRace = {
+        eventId,
+        key,
+        eventName,
+        date,
+        videoUrl,
+        runners,
+        games: []
+      };
+
+      currentRaceSeenGameKeys = new Set();
+    }
+
+    if (currentRace && game) {
+      const dedupKey = getRaceGameDedupKey(row);
+
+      if (!currentRaceSeenGameKeys.has(dedupKey)) {
+        currentRace.games.push(game);
+        currentRaceSeenGameKeys.add(dedupKey);
+      }
+    }
+  });
+
+  if (currentRace) {
+    races.push(currentRace);
+  }
+
+  return races;
+}
+
+function getRaceDerivedRowsForGame(selectedOption) {
+  const matchingTrilogies = getMatchingTrilogyTitles(selectedOption.game);
+
+  const matchingRaces = raceData.filter(race => {
+    return race.games.some(game => {
+      const cleanGame = normalizeName(game);
+      return cleanGame === selectedOption.game || matchingTrilogies.includes(cleanGame);
+    });
+  });
+
+  return matchingRaces
+    .map(race => {
+      const inferredConsole = inferConsoleForRaceGame(selectedOption.game, race);
+
+      if (
+  selectedOption.console &&
+  normalizeName(inferredConsole) !== normalizeName(selectedOption.console)
+) {
+  return null;
+}
+
+      return {
+        GAME: selectedOption.game,
+        EVENT: race.eventName,
+        DATE: race.date,
+        RUNTYPE: "Race",
+        SPEEDRUNTYPE: "",
+        CONSOLE: inferredConsole,
+        VIDEOURL: race.videoUrl,
+        VIDEOURL2: "",
+        TIMESTAMP: "",
+        TIMESTAMP2: "",
+        _isRaceDerived: true,
+        _race: race,
+        ...Object.fromEntries(
+          race.runners.flatMap((runner, index) => ([
+            [`RUNNER${index + 1}`, runner.name]
+          ]))
+        )
+      };
+    })
+    .filter(Boolean);
+}
+
   function escapeHtml(value) {
     return String(value ?? "")
       .replaceAll("&", "&amp;")
@@ -188,6 +458,15 @@ function getMatchingTrilogyTitles(gameName) {
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#39;");
   }
+  
+  function filterDropdownItems(inputEl, itemsWrap) {
+  const query = inputEl.value.trim().toLowerCase();
+
+  itemsWrap.querySelectorAll(".sc-dropdown-item").forEach(item => {
+    const text = item.textContent.trim().toLowerCase();
+    item.style.display = text.includes(query) ? "" : "none";
+  });
+}
   
   function getNamesFromColumns(row, prefix, maxCount) {
   const names = [];
@@ -330,33 +609,73 @@ function getUniqueConsoles(rows) {
   );
 }
 
-function closeConsoleMenu() {
-  consoleDropdown.classList.remove("open");
-  consoleTrigger.setAttribute("aria-expanded", "false");
+function getConsoleForRaceEvent(eventName) {
+  const cleanEvent = normalizeName(eventName).toLowerCase();
+
+  if (cleanEvent.includes("sega 8")) return "Genesis";
+  if (cleanEvent.includes("mega 16")) return "Genesis";
+  if (cleanEvent.includes("sega 16")) return "Genesis";
+  if (cleanEvent.includes("master 8")) return "Master System";
+  if (cleanEvent.includes("5g game gear")) return "Game Gear";
+  if (cleanEvent.includes("saturn8lia")) return "Saturn";
+  if (cleanEvent.includes("shinobi")) return "Genesis";
+
+  return "";
 }
 
-function openConsoleMenu() {
-  consoleDropdown.classList.add("open");
-  consoleTrigger.setAttribute("aria-expanded", "true");
+function getKnownConsolesForGame(gameName) {
+  const consoles = new Set();
+
+  allRows.forEach(row => {
+    const rowGame = normalizeName(row.GAME);
+    const rowConsole = normalizeName(row.CONSOLE);
+
+    if (rowGame === gameName && rowConsole) {
+      consoles.add(rowConsole);
+    }
+  });
+
+  return [...consoles].sort((a, b) =>
+    a.localeCompare(b, undefined, { sensitivity: "base" })
+  );
+}
+
+function inferConsoleForRaceGame(gameName, race) {
+  const knownConsoles = getKnownConsolesForGame(gameName);
+  const eventConsole = getConsoleForRaceEvent(race.eventName);
+
+  if (eventConsole) {
+    return eventConsole;
+  }
+
+  if (knownConsoles.length === 1) {
+    return knownConsoles[0];
+  }
+
+  if (knownConsoles.length > 1) {
+    return knownConsoles[0];
+  }
+
+  return "";
 }
 
 function populateGameDropdown() {
   currentGameOptions = getGameDropdownOptions(allRows, selectedConsoleFilter);
 
-  menu.innerHTML = "";
-  trigger.textContent = "Select a game";
+  gameItemsWrap.innerHTML = "";
+  trigger.textContent = "Select A Game";
 
   if (!currentGameOptions.length) {
-    trigger.textContent = "No games found";
+    trigger.textContent = "No Games Found";
     return;
   }
 
   const defaultItem = document.createElement("button");
   defaultItem.type = "button";
   defaultItem.className = "sc-dropdown-item";
-  defaultItem.textContent = "Select a game";
+  defaultItem.textContent = "Select A Game";
   defaultItem.addEventListener("click", () => setSelected(null));
-  menu.appendChild(defaultItem);
+  gameItemsWrap.appendChild(defaultItem);
 
   currentGameOptions.forEach(option => {
     const item = document.createElement("button");
@@ -365,14 +684,16 @@ function populateGameDropdown() {
     item.textContent = option.label;
     item.title = option.label;
     item.addEventListener("click", () => setSelected(option));
-    menu.appendChild(item);
+    gameItemsWrap.appendChild(item);
   });
+
+  filterDropdownItems(gameSearchInput, gameItemsWrap);
 }
 
 function populateConsoleDropdown() {
   const consoles = getUniqueConsoles(allRows);
 
-  consoleMenu.innerHTML = "";
+  consoleItemsWrap.innerHTML = "";
 
   const allItem = document.createElement("button");
   allItem.type = "button";
@@ -385,7 +706,7 @@ function populateConsoleDropdown() {
     setSelected(null);
     populateGameDropdown();
   });
-  consoleMenu.appendChild(allItem);
+  consoleItemsWrap.appendChild(allItem);
 
   consoles.forEach(consoleName => {
     const item = document.createElement("button");
@@ -400,8 +721,10 @@ function populateConsoleDropdown() {
       setSelected(null);
       populateGameDropdown();
     });
-    consoleMenu.appendChild(item);
+    consoleItemsWrap.appendChild(item);
   });
+
+  filterDropdownItems(consoleSearchInput, consoleItemsWrap);
 }
 
 function formatDifferenceFromLeader(diffSeconds) {
@@ -505,8 +828,29 @@ function openRunModal(row) {
   const embedUrl = getYouTubeEmbedUrl(row.VIDEOURL, row.TIMESTAMP);
   const embedUrl2 = getYouTubeEmbedUrl(row.VIDEOURL2, row.TIMESTAMP2);
 
-  const race1Data = buildRaceResultsData(row, "TIMERUNNER");
-  const race2Data = buildRaceResultsData(row, "RACE2TIMERUNNER");
+  let race1Data = [];
+  let race2Data = [];
+
+  if (row._isRaceDerived && row._race) {
+    const sorted = [...row._race.runners].sort((a, b) => {
+      if (a.isDNF && b.isDNF) return 0;
+      if (a.isDNF) return 1;
+      if (b.isDNF) return -1;
+      return a.seconds - b.seconds;
+    });
+
+    const fastestEntry = sorted.find(r => !r.isDNF);
+    const fastest = fastestEntry ? fastestEntry.seconds : null;
+
+    race1Data = sorted.map(item => ({
+      runner: item.name,
+      time: item.time,
+      difference: item.isDNF || fastest === null ? null : item.seconds - fastest
+    }));
+  } else {
+    race1Data = buildRaceResultsData(row, "TIMERUNNER");
+    race2Data = buildRaceResultsData(row, "RACE2TIMERUNNER");
+  }
 
   const eventName = normalizeName(row.EVENT);
 
@@ -619,7 +963,6 @@ nextBtn.addEventListener("click", () => {
 
     if (!game) return;
     if (isTrilogyTitle(game)) return;
-
     if (consoleFilter && consoleName !== consoleFilter) return;
 
     if (!gameToConsoles.has(game)) {
@@ -629,6 +972,32 @@ nextBtn.addEventListener("click", () => {
     if (consoleName) {
       gameToConsoles.get(game).add(consoleName);
     }
+  });
+
+  raceData.forEach(race => {
+    race.games.forEach(game => {
+      const cleanGame = normalizeName(game);
+      if (!cleanGame) return;
+      if (isTrilogyTitle(cleanGame)) return;
+
+      const inferredConsole = inferConsoleForRaceGame(cleanGame, race);
+
+      if (consoleFilter && inferredConsole && inferredConsole !== consoleFilter) {
+        return;
+      }
+
+      if (consoleFilter && !inferredConsole) {
+        return;
+      }
+
+      if (!gameToConsoles.has(cleanGame)) {
+        gameToConsoles.set(cleanGame, new Set());
+      }
+
+      if (inferredConsole) {
+        gameToConsoles.get(cleanGame).add(inferredConsole);
+      }
+    });
   });
 
   const options = [];
@@ -683,10 +1052,10 @@ nextBtn.addEventListener("click", () => {
   }
 }
 
-  function getGameRows(selectedOption) {
+function getGameRows(selectedOption) {
   const matchingTrilogies = getMatchingTrilogyTitles(selectedOption.game);
 
-  return allRows.filter(row => {
+  const normalRows = allRows.filter(row => {
     const rowGame = normalizeName(row.GAME);
     const rowConsole = normalizeName(row.CONSOLE);
 
@@ -703,6 +1072,18 @@ nextBtn.addEventListener("click", () => {
 
     return true;
   });
+
+  const raceDerivedRows = getRaceDerivedRowsForGame(selectedOption);
+
+  const combinedRows = [...normalRows, ...raceDerivedRows];
+
+  combinedRows.sort((a, b) => {
+    const dateA = normalizeName(a.DATE);
+    const dateB = normalizeName(b.DATE);
+    return new Date(dateA) - new Date(dateB);
+  });
+
+  return combinedRows;
 }
 
   function getRunnerNamesPlain(row) {
@@ -716,7 +1097,7 @@ nextBtn.addEventListener("click", () => {
     return names.join(", ");
   }
 
-  function buildGameSummary(gameRows) {
+function buildGameSummary(gameRows) {
   const eventSet = new Set();
   const runnerCounts = new Map();
 
@@ -746,13 +1127,13 @@ nextBtn.addEventListener("click", () => {
 
   let mostCommonRunnerDisplay = "—";
 
-if (topRunners.length === 1) {
-  mostCommonRunnerDisplay = topRunners[0];
-} else if (topRunners.length === 2) {
-  mostCommonRunnerDisplay = `Tie between ${topRunners[0]} and ${topRunners[1]}`;
-} else if (topRunners.length > 2) {
-  mostCommonRunnerDisplay = `${topRunners.length}-way tie`;
-}
+  if (topRunners.length === 1) {
+    mostCommonRunnerDisplay = topRunners[0];
+  } else if (topRunners.length === 2) {
+    mostCommonRunnerDisplay = `Tie between ${topRunners[0]} and ${topRunners[1]}`;
+  } else if (topRunners.length > 2) {
+    mostCommonRunnerDisplay = `${topRunners.length}-way tie`;
+  }
 
   return {
     runCount: gameRows.length,
@@ -898,7 +1279,7 @@ if (topRunners.length === 1) {
   }
 
   function setSelected(selectedOption) {
-    trigger.textContent = selectedOption ? selectedOption.label : "Select a game";
+    trigger.textContent = selectedOption ? selectedOption.label : "Select A Game";
     trigger.dataset.value = selectedOption ? selectedOption.label : "";
     closeMenu();
     renderGame(selectedOption);
@@ -906,67 +1287,86 @@ if (topRunners.length === 1) {
 
   trigger.addEventListener("click", (e) => {
     e.stopPropagation();
+
+    if (isMobilePickerMode()) {
+      closeConsoleMenu();
+      openMobilePicker("Select Game", "game");
+      return;
+    }
+
     if (dropdown.classList.contains("open")) {
-      closeMenu();
+      closeGameMenu();
     } else {
-      openMenu();
+      openGameMenu();
+      gameSearchInput.focus();
     }
   });
-  
+
   consoleTrigger.addEventListener("click", (e) => {
-  e.stopPropagation();
-  if (consoleDropdown.classList.contains("open")) {
-    closeConsoleMenu();
-  } else {
-    openConsoleMenu();
-  }
-});
+    e.stopPropagation();
+
+    if (isMobilePickerMode()) {
+      closeGameMenu();
+      openMobilePicker("Filter by Console", "console");
+      return;
+    }
+
+    if (consoleDropdown.classList.contains("open")) {
+      closeConsoleMenu();
+    } else {
+      openConsoleMenu();
+      consoleSearchInput.focus();
+    }
+  });
 
   document.addEventListener("click", (e) => {
-  if (!dropdown.contains(e.target)) {
-    closeMenu();
-  }
-  if (!consoleDropdown.contains(e.target)) {
-    closeConsoleMenu();
-  }
+    if (!dropdown.contains(e.target)) closeGameMenu();
+    if (!consoleDropdown.contains(e.target)) closeConsoleMenu();
+  });
+
+consoleSearchInput.addEventListener("input", () => {
+  filterDropdownItems(consoleSearchInput, consoleItemsWrap);
 });
 
-  Papa.parse(CSV_URL, {
-    download: true,
-    header: true,
-    skipEmptyLines: true,
-    complete: function(results) {
-      allRows = results.data || [];
-      populateConsoleDropdown();
-populateGameDropdown();
+gameSearchInput.addEventListener("input", () => {
+  filterDropdownItems(gameSearchInput, gameItemsWrap);
+});
 
-if (!currentGameOptions.length) {
-  trigger.textContent = "No games found";
-  content.innerHTML = `<p class="sc-results-message">No games were found in the CSV.</p>`;
-  return;
-}
-
-      const defaultItem = document.createElement("button");
-      defaultItem.type = "button";
-      defaultItem.className = "sc-dropdown-item";
-      defaultItem.textContent = "Select a game";
-      defaultItem.addEventListener("click", () => setSelected(null));
-      menu.appendChild(defaultItem);
-
-      gameOptions.forEach(option => {
-        const item = document.createElement("button");
-        item.type = "button";
-        item.className = "sc-dropdown-item";
-        item.textContent = option.label;
-        item.title = option.label;
-        item.addEventListener("click", () => setSelected(option));
-        menu.appendChild(item);
+  Promise.all([
+    new Promise((resolve, reject) => {
+      Papa.parse(CSV_URL, {
+        download: true,
+        header: true,
+        skipEmptyLines: true,
+        complete: results => resolve(results.data || []),
+        error: reject
       });
-    },
-    error: function(err) {
-      console.error("Papa Parse load error:", err);
-      trigger.textContent = "Failed to load games";
-      content.innerHTML = `<p class="sc-results-message">Could not load CSV data.</p>`;
+    }),
+    new Promise((resolve, reject) => {
+      Papa.parse(RACES_CSV_URL, {
+        download: true,
+        header: true,
+        skipEmptyLines: true,
+        complete: results => resolve(results.data || []),
+        error: reject
+      });
+    })
+  ]).then(([mainRows, extraRaceRows]) => {
+    allRows = mainRows;
+    raceRows = extraRaceRows;
+    raceData = buildRaceDatabase(raceRows);
+
+    populateConsoleDropdown();
+    populateGameDropdown();
+
+    if (!currentGameOptions.length) {
+      trigger.textContent = "No games found";
+      content.innerHTML = `<p class="sc-results-message">No games were found in the CSV.</p>`;
+      return;
     }
+  }).catch(err => {
+    console.error("CSV load error:", err);
+    trigger.textContent = "Failed to load games";
+    content.innerHTML = `<p class="sc-results-message">Could not load CSV data.</p>`;
   });
 });
