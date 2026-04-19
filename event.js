@@ -5,6 +5,11 @@ document.addEventListener("DOMContentLoaded", () => {
   let allRows = [];
   let currentEventRows = [];
   let currentRunIndex = -1;
+  
+  const EXCLUDED_EVENT_KEYS = new Set([
+    // "PUT_KEY_HERE",
+    // "PUT_ANOTHER_KEY_HERE"
+  ]);
 
   const wrapper = document.createElement("div");
   wrapper.className = "sc-page-controls";
@@ -63,7 +68,7 @@ document.addEventListener("DOMContentLoaded", () => {
   "28": "images/saturnalia_logo_1.png",
   "29": "images/MKIII.png",
   "30": "images/SW6logo.png",
-  "31": "images/segalympics_logo_2026.png",
+  "31": "images/segalympics_2026_logo.png",
 };
   
 
@@ -203,6 +208,14 @@ function buildTwitchLinksHtml(names) {
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#39;");
   }
+  
+    function normalizeName(value) {
+    return String(value || "").trim();
+  }
+
+  function isExcludedEventRow(row) {
+    return EXCLUDED_EVENT_KEYS.has(normalizeName(row.KEY));
+  }
 
 function parseTimestampToSeconds(timestamp) {
   const raw = String(timestamp || "").trim();
@@ -330,7 +343,6 @@ function buildRaceResultsData(row, timePrefix) {
 
   if (!results.length) return [];
 
-  // Sort: valid times first, then DNFs at bottom
   results.sort((a, b) => {
     if (a.isDNF && b.isDNF) return 0;
     if (a.isDNF) return 1;
@@ -338,7 +350,6 @@ function buildRaceResultsData(row, timePrefix) {
     return a.seconds - b.seconds;
   });
 
-  // Find fastest valid time
   const fastestEntry = results.find(r => !r.isDNF);
   const fastest = fastestEntry ? fastestEntry.seconds : null;
 
@@ -388,6 +399,11 @@ function createRaceTable(title, data) {
   wrap.appendChild(table);
 
   return wrap;
+}
+
+function getEventHoraroUrl(rows) {
+  const firstRow = rows.find(row => normalizeName(row.HORARO));
+  return firstRow ? normalizeName(firstRow.HORARO) : "";
 }
 
 function openRunModal(row) {
@@ -535,6 +551,26 @@ if (!embedUrl && !embedUrl2) {
   resultsWrap.appendChild(imageWrap);
 }
 
+function renderHoraroLink(horaroUrl) {
+  const existing = document.getElementById("scEventHoraro");
+  if (existing) existing.remove();
+
+  if (!horaroUrl) return;
+
+  const wrap = document.createElement("p");
+  wrap.className = "sc-event-horaro";
+  wrap.id = "scEventHoraro";
+
+  const link = document.createElement("a");
+  link.href = horaroUrl;
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  link.textContent = "Official Schedule";
+
+  wrap.appendChild(link);
+  resultsWrap.appendChild(wrap);
+}
+
   function buildResultsTable(rowsForEventId, eventName) {
 
     if (!rowsForEventId.length) {
@@ -557,7 +593,7 @@ if (!embedUrl && !embedUrl2) {
       <tr>
         <th>GAME</th>
         <th>RUN TYPE</th>
-        <th>SPEEDRUN CATEGORY</th>
+        <th>CATEGORY</th>
         <th>CONSOLE</th>
         <th>RUNNER(S)</th>
       </tr>
@@ -636,14 +672,17 @@ if (!embedUrl && !embedUrl2) {
     }
 
     const rowsForEventId = allRows.filter(
-  row => String(row.EVENTID || "").trim() === eventId
-);
+      row => String(row.EVENTID || "").trim() === eventId
+    );
 
-currentEventRows = rowsForEventId;
+    const horaroUrl = getEventHoraroUrl(rowsForEventId);
 
-resultsWrap.innerHTML = "";
-renderEventImage(eventId);
-buildResultsTable(rowsForEventId, eventName);
+    currentEventRows = rowsForEventId;
+
+    resultsWrap.innerHTML = "";
+    renderEventImage(eventId);
+    renderHoraroLink(horaroUrl);
+    buildResultsTable(rowsForEventId, eventName);
   }
 
   trigger.addEventListener("click", (e) => {
@@ -665,8 +704,8 @@ buildResultsTable(rowsForEventId, eventName);
     download: true,
     header: true,
     skipEmptyLines: true,
-    complete: function(results) {
-      allRows = results.data || [];
+        complete: function(results) {
+      allRows = (results.data || []).filter(row => !isExcludedEventRow(row));
 
       const uniqueEvents = [...new Set(
         allRows
