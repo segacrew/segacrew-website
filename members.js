@@ -422,12 +422,21 @@ function getConsoleForRace(race) {
 }
 
 function getRacePlacements(race) {
-  const results = race.runners.map(runner => ({
-    name: runner.name,
-    time: runner.time,
-    seconds: runner.seconds,
-    isDNF: runner.isDNF
-  }));
+  const results = race.runners
+    .filter(runner => normalizeName(runner.name))
+    .map(runner => {
+      const seconds =
+        typeof runner.seconds === "number"
+          ? runner.seconds
+          : parseRaceFinishTime(runner.time);
+
+      return {
+        name: runner.name,
+        time: runner.time,
+        seconds,
+        isDNF: seconds === null
+      };
+    });
 
   results.sort((a, b) => {
     if (a.isDNF && b.isDNF) return 0;
@@ -443,6 +452,7 @@ function getRacePlacements(race) {
   }));
 }
 
+
 function getRaceStatsForRunner(memberName) {
   const memberRaces = getRacesForRunner(memberName);
 
@@ -457,10 +467,10 @@ function getRaceStatsForRunner(memberName) {
 	if (EXCLUDED_RACE_KEYS.has(race.key)) return; 
     const placements = getRacePlacements(race);
     const runnerResult = placements.find(
-      p => normalizeHandle(p.name) === normalizeHandle(memberName)
-    );
+  p => normalizeHandle(p.name) === normalizeHandle(memberName)
+);
 
-    if (!runnerResult) return;
+if (!runnerResult) return;
 
     countedRaces++;
     totalPlace += runnerResult.place;
@@ -501,7 +511,11 @@ function getRaceGroupKey(race) {
     return "master8";
   }
 
-  if (eventName.includes("sega 8") || eventName.includes("sega 16")) {
+  if (
+    eventName.includes("sega 8") ||
+    eventName.includes("sega 16") 
+    
+  ) {
     return "sega8sega16";
   }
 
@@ -826,7 +840,7 @@ function getNamesFromColumns(row, prefix, maxCount) {
 }
 
 function getRunnerNames(row) {
-  return getNamesFromColumns(row, "RUNNER", 16);
+  return getNamesFromColumns(row, "RUNNER", 21);
 }
 
 function buildTwitchLinksHtml(names) {
@@ -1107,7 +1121,7 @@ function formatDifferenceFromLeader(diffSeconds) {
 function buildRaceResultsData(row, timePrefix) {
   const results = [];
 
-  for (let i = 1; i <= 6; i++) {
+  for (let i = 1; i <= 21; i++) {
     const runnerName = String(row[`RUNNER${i}`] || "").trim();
     const timeValue = String(row[`${timePrefix}${i}`] || "").trim();
 
@@ -1305,7 +1319,7 @@ nextBtn.addEventListener("click", () => {
 function rowIncludesCommentary(row, memberName) {
   const target = normalizeHandle(memberName);
 
-  for (let i = 1; i <= 16; i++) {
+  for (let i = 1; i <= 21; i++) {
     const commentary = normalizeHandle(row[`COMMENTARY${i}`]);
     if (commentary === target) return true;
   }
@@ -1316,7 +1330,7 @@ function rowIncludesCommentary(row, memberName) {
 function getRunnerNamesPlain(row) {
   const names = [];
 
-  for (let i = 1; i <= 16; i++) {
+  for (let i = 1; i <= 21; i++) {
     const runner = normalizeName(row[`RUNNER${i}`]);
     if (runner) names.push(runner);
   }
@@ -1328,7 +1342,7 @@ function getAllRunnerNames(rows) {
   const names = new Set();
 
   rows.forEach(row => {
-    for (let i = 1; i <= 16; i++) {
+    for (let i = 1; i <= 21; i++) {
       const runner = normalizeName(row[`RUNNER${i}`]);
       if (runner) names.add(runner);
     }
@@ -1699,20 +1713,20 @@ function buildRaceDatabase(rows) {
 
       const runners = [];
 
-      for (let i = 1; i <= 6; i++) {
+      for (let i = 1; i <= 21; i++) {
         const name = normalizeName(row[`RUNNER${i}`]);
         const rawTime = normalizeName(row[`RUNNER${i}TIME`]);
 
-        if (name) {
-          const parsedSeconds = parseRaceFinishTime(rawTime);
+        if (!name) continue;
 
-          runners.push({
-            name,
-            time: rawTime || "",
-            seconds: parsedSeconds,
-            isDNF: rawTime !== "" && parsedSeconds === null
-          });
-        }
+        const parsedSeconds = parseRaceFinishTime(rawTime);
+
+        runners.push({
+          name,
+          time: rawTime || "",
+          seconds: parsedSeconds,
+          isDNF: parsedSeconds === null
+        });
       }
 
       currentRace = {
@@ -2115,6 +2129,36 @@ function renderMemberCommentaryTable(memberName) {
     closeMenu();
     renderMember(name);
   }
+  
+  window.debugRacePlacementsForRunner = function(memberName) {
+  getRacesForRunner(memberName).forEach(race => {
+    if (EXCLUDED_RACE_KEYS.has(race.key)) return;
+
+    const placements = getRacePlacements(race);
+    const result = placements.find(
+      p => normalizeHandle(p.name) === normalizeHandle(memberName)
+    );
+
+    if (!result) return;
+
+    console.log({
+      event: race.eventName,
+      key: race.key,
+      runner: result.name,
+      place: result.place,
+      fieldSize: result.fieldSize,
+      time: result.time,
+      seconds: result.seconds,
+      allPlacements: placements.map(p => ({
+        place: p.place,
+        name: p.name,
+        time: p.time,
+        seconds: p.seconds,
+        isDNF: p.isDNF
+      }))
+    });
+  });
+};
 
   function handleMembersLoaded() {
     const uniqueMembers = getUniqueMemberNames();
