@@ -74,14 +74,14 @@ const EXTRA_CSV_URL = IS_LOCAL
   wrapper.appendChild(label);
   wrapper.appendChild(dropdown);
   controls.appendChild(wrapper);
-  
+
 const mobileMemberPicker = document.createElement("div");
 mobileMemberPicker.className = "sc-mobile-member-picker";
 mobileMemberPicker.innerHTML = `
   <div class="sc-mobile-member-panel">
     <div class="sc-mobile-member-header">
       <span>Select a member</span>
-      <button type="button" class="sc-mobile-member-close">×</button>
+      <button type="button" class="sc-mobile-member-close" aria-label="Close"></button>
     </div>
     <div class="sc-mobile-member-list"></div>
   </div>
@@ -93,7 +93,7 @@ const mobileMemberList = mobileMemberPicker.querySelector(".sc-mobile-member-lis
 const mobileMemberClose = mobileMemberPicker.querySelector(".sc-mobile-member-close");
 
 function isMobileMemberPickerMode() {
-  return window.matchMedia("(max-width: 900px), (pointer: coarse)").matches;
+  return window.innerWidth <= 768;
 }
 
 function closeMobileMemberPicker() {
@@ -125,10 +125,10 @@ mobileMemberPicker.addEventListener("click", e => {
   if (e.target === mobileMemberPicker) {
     closeMobileMemberPicker();
   }
-});  
+});
+    
   
-  
-  const modal = document.createElement("div");
+const modal = document.createElement("div");
 modal.className = "sc-modal";
 modal.id = "runModal";
 modal.innerHTML = `
@@ -1836,20 +1836,13 @@ function setupMemberVisuals(visualCard, memberName) {
   }
 
   trigger.addEventListener("click", (e) => {
-  e.stopPropagation();
-
-  if (isMobileMemberPickerMode()) {
-    closeMenu();
-    openMobileMemberPicker();
-    return;
-  }
-
-  if (dropdown.classList.contains("open")) {
-    closeMenu();
-  } else {
-    openMenu();
-  }
-});
+    e.stopPropagation();
+    if (dropdown.classList.contains("open")) {
+      closeMenu();
+    } else {
+      openMenu();
+    }
+  });
   
 
   document.addEventListener("click", (e) => {
@@ -2544,13 +2537,20 @@ menu.appendChild(item);
   }
 
   trigger.addEventListener("click", (e) => {
-    e.stopPropagation();
-    if (dropdown.classList.contains("open")) {
-      closeMenu();
-    } else {
-      openMenu();
-    }
-  });
+  e.stopPropagation();
+
+  if (isMobileMemberPickerMode()) {
+    closeMenu();
+    openMobileMemberPicker();
+    return;
+  }
+
+  if (dropdown.classList.contains("open")) {
+    closeMenu();
+  } else {
+    openMenu();
+  }
+});
   
   document.addEventListener("keydown", (e) => {
   if (!dropdown.classList.contains("open")) return;

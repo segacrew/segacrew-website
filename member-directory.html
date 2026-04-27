@@ -555,65 +555,59 @@
 }
 
 .sc-mobile-member-picker{
-  position:fixed !important;
-  inset:0 !important;
-  display:none !important;
-  background:rgba(0,0,0,0.45);
-  z-index:999999;
+  display:none;
 }
 
-.sc-mobile-member-picker.open{
-  display:block !important;
-}
+@media (max-width:900px){
+  .sc-mobile-member-picker.open{
+    display:block;
+  }
 
-.sc-mobile-member-panel{
-  position:fixed;
-  inset:0;
-  background:#202830;
-  color:#f2f5f8;
-  display:flex;
-  flex-direction:column;
-}
+  .sc-mobile-member-panel{
+    position:fixed;
+    left:16px;
+    right:16px;
+    top:22vh;
+    max-height:62vh;
+    overflow:hidden;
+    background:#202830;
+    border-radius:22px;
+    box-shadow:0 18px 45px rgba(0,0,0,.35);
+    z-index:99999;
+  }
 
-.sc-mobile-member-header{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  padding:18px 22px;
-  font-size:1.25rem;
-  font-weight:700;
-  border-bottom:1px solid rgba(255,255,255,0.15);
-}
+  .sc-mobile-member-header{
+    display:none;
+  }
 
-.sc-mobile-member-close{
-  border:0;
-  background:none;
-  color:#f2f5f8;
-  font-size:2rem;
-  line-height:1;
-  cursor:pointer;
-}
+  .sc-mobile-member-list{
+    max-height:62vh;
+    overflow:auto;
+  }
 
-.sc-mobile-member-list{
-  flex:1;
-  overflow:auto;
-}
+  .sc-mobile-member-list .sc-dropdown-item{
+    width:100%;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:18px 22px;
+    border:0;
+    border-bottom:1px solid rgba(255,255,255,.12);
+    background:#202830;
+    color:#f2f5f8;
+    font-size:1.25rem;
+    text-align:left;
+  }
 
-.sc-mobile-member-list .sc-dropdown-item{
-  width:100%;
-  display:block;
-  padding:20px 24px;
-  border:0;
-  border-bottom:1px solid rgba(255,255,255,0.12);
-  background:none;
-  color:#f2f5f8;
-  text-align:left;
-  font-size:1.35rem;
-}
+  .sc-mobile-member-list .sc-dropdown-item::after{
+    content:"○";
+    opacity:.85;
+    font-size:1.4rem;
+  }
 
-.sc-mobile-member-list .sc-dropdown-item.selected{
-  font-weight:700;
-  color:#fff;
+  .sc-mobile-member-list .sc-dropdown-item.selected::after{
+    content:"◉";
+  }
 }
 
 
@@ -1018,7 +1012,6 @@
   }
 </style>
 
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <header class="sc-header">
   <div class="sc-header-inner">
     <a href="/" class="sc-brand">
