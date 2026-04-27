@@ -9,8 +9,6 @@ document.addEventListener("DOMContentLoaded", () => {
   let raceData = [];
   let currentMemberRunRows = [];
   let currentMemberRunIndex = -1;
-  let videoDurationMap = new Map();
-  let playtimeRankingData = [];
 
   const IS_LOCAL =
   window.location.hostname === "127.0.0.1" ||
@@ -65,68 +63,12 @@ const EXTRA_CSV_URL = IS_LOCAL
   const menu = document.createElement("div");
   menu.className = "sc-dropdown-menu";
   menu.setAttribute("role", "listbox");
-  
-  let memberTypeSearch = "";
-  let memberTypeSearchTimer = null;
 
   dropdown.appendChild(trigger);
   dropdown.appendChild(menu);
   wrapper.appendChild(label);
   wrapper.appendChild(dropdown);
   controls.appendChild(wrapper);
-  
-const mobileMemberPicker = document.createElement("div");
-mobileMemberPicker.className = "sc-mobile-member-picker";
-mobileMemberPicker.innerHTML = `
-  <div class="sc-mobile-member-panel">
-    <div class="sc-mobile-member-header">
-      <span>Select a member</span>
-      <button type="button" class="sc-mobile-member-close">×</button>
-    </div>
-    <div class="sc-mobile-member-list"></div>
-  </div>
-`;
-
-document.body.appendChild(mobileMemberPicker);
-
-const mobileMemberList = mobileMemberPicker.querySelector(".sc-mobile-member-list");
-const mobileMemberClose = mobileMemberPicker.querySelector(".sc-mobile-member-close");
-
-function isMobileMemberPickerMode() {
-  return window.innerWidth <= 768;
-}
-
-function closeMobileMemberPicker() {
-  mobileMemberPicker.classList.remove("open");
-  document.body.style.overflow = "";
-}
-
-function openMobileMemberPicker() {
-  mobileMemberList.innerHTML = "";
-
-  [...menu.querySelectorAll(".sc-dropdown-item")].forEach(sourceItem => {
-    const item = sourceItem.cloneNode(true);
-
-    item.addEventListener("click", () => {
-      sourceItem.click();
-      closeMobileMemberPicker();
-    });
-
-    mobileMemberList.appendChild(item);
-  });
-
-  mobileMemberPicker.classList.add("open");
-  document.body.style.overflow = "hidden";
-}
-
-mobileMemberClose.addEventListener("click", closeMobileMemberPicker);
-
-mobileMemberPicker.addEventListener("click", e => {
-  if (e.target === mobileMemberPicker) {
-    closeMobileMemberPicker();
-  }
-});  
-  
   
   const modal = document.createElement("div");
 modal.className = "sc-modal";
@@ -161,44 +103,9 @@ const nextBtn = modal.querySelector(".sc-modal-next");
   }
 
   function openMenu() {
-  dropdown.classList.add("open");
-  trigger.setAttribute("aria-expanded", "true");
-
-  requestAnimationFrame(() => {
-    scrollSelectedMemberIntoView();
-  });
-}
-  
-  function scrollSelectedMemberIntoView() {
-  const selectedName = normalizeName(trigger.dataset.value);
-  if (!selectedName) return;
-
-  const selectedItem = [...menu.querySelectorAll(".sc-dropdown-item")].find(
-    item => normalizeName(item.dataset.value) === selectedName
-  );
-
-  if (selectedItem) {
-    selectedItem.scrollIntoView({
-      block: "center"
-    });
+    dropdown.classList.add("open");
+    trigger.setAttribute("aria-expanded", "true");
   }
-}
-
-function scrollMemberMatchIntoView(query) {
-  const cleanQuery = normalizeName(query).toLowerCase();
-  if (!cleanQuery) return;
-
-  const match = [...menu.querySelectorAll(".sc-dropdown-item")].find(item => {
-    const value = normalizeName(item.dataset.value || item.textContent).toLowerCase();
-    return value.startsWith(cleanQuery);
-  });
-
-  if (match) {
-    match.scrollIntoView({
-      block: "center"
-    });
-  }
-}
 
   function escapeHtml(value) {
     return String(value ?? "")
@@ -217,39 +124,21 @@ function scrollMemberMatchIntoView(query) {
     return String(value || "").trim().toLowerCase();
   }
 
-function getUniqueMemberNames() {
-  const nameMap = new Map(); // key = normalized, value = display name
+  function getUniqueMemberNames(rows) {
+    const names = new Set();
 
-  function addName(name) {
-    const clean = normalizeName(name);
-    if (!clean) return;
+    rows.forEach(row => {
+      for (let i = 1; i <= 16; i++) {
+        const runner = normalizeName(row[`RUNNER${i}`]);
+        const commentary = normalizeName(row[`COMMENTARY${i}`]);
 
-    const key = clean.toLowerCase();
-
-    if (!nameMap.has(key)) {
-      nameMap.set(key, clean);
-    }
-  }
-
-  // --- main database ---
-  allRows.forEach(row => {
-    for (let i = 1; i <= 16; i++) {
-      addName(row[`RUNNER${i}`]);
-      addName(row[`COMMENTARY${i}`]);
-    }
-  });
-
-  // --- race database ---
-  raceData.forEach(race => {
-    race.runners.forEach(runner => {
-      addName(runner.name);
+        if (runner) names.add(runner);
+        if (commentary) names.add(commentary);
+      }
     });
-  });
 
-  return [...nameMap.values()].sort((a, b) =>
-    a.localeCompare(b, undefined, { sensitivity: "base" })
-  );
-}
+    return [...names].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+  }
 
   function makePlaceholder(name) {
     const div = document.createElement("div");
@@ -352,26 +241,16 @@ function buildMemberSummary(memberName) {
   });
 
   memberRaces.forEach(race => {
-  if (race.eventName) eventSet.add(race.eventName);
+    if (race.eventName) eventSet.add(race.eventName);
 
-  const raceConsole = getConsoleForRace(race);
+    race.games.forEach(game => {
+      const cleanGame = normalizeName(game);
+      if (!cleanGame) return;
 
-  if (raceConsole) {
-    consoleSet.add(raceConsole);
-  }
-
-  race.games.forEach(game => {
-    const cleanGame = normalizeName(game);
-    if (!cleanGame) return;
-
-    gameSet.add(cleanGame);
-    gameCounts.set(cleanGame, (gameCounts.get(cleanGame) || 0) + 1);
-
-    if (raceConsole) {
-      consoleCounts.set(raceConsole, (consoleCounts.get(raceConsole) || 0) + 1);
-    }
+      gameSet.add(cleanGame);
+      gameCounts.set(cleanGame, (gameCounts.get(cleanGame) || 0) + 1);
+    });
   });
-});
 
   let mostPlayedGame = "—";
   let mostPlayedGameCount = 0;
@@ -433,7 +312,6 @@ function getMemberRows(memberName) {
 
 function getMostPopularGamesData(memberName) {
   const memberRows = getMemberRows(memberName);
-  const memberRaces = getRacesForRunner(memberName);
   const gameCounts = new Map();
 
   memberRows.forEach(row => {
@@ -442,47 +320,32 @@ function getMostPopularGamesData(memberName) {
     gameCounts.set(game, (gameCounts.get(game) || 0) + 1);
   });
 
-  memberRaces.forEach(race => {
-    race.games.forEach(game => {
-      const cleanGame = normalizeName(game);
-      if (!cleanGame) return;
-      gameCounts.set(cleanGame, (gameCounts.get(cleanGame) || 0) + 1);
-    });
-  });
+  const sortedGames = [...gameCounts.entries()]
+    .sort((a, b) => b[1] - a[1]);
 
-const sortedGames = [...gameCounts.entries()]
-  .sort((a, b) => b[1] - a[1]);
+  const topFive = sortedGames.slice(0, 5);
+  const other = sortedGames.slice(5);
 
-const totalRuns = sortedGames.reduce((sum, [, count]) => sum + count, 0);
+  const labels = topFive.map(([game]) => game);
+  const values = topFive.map(([, count]) => count);
 
-const topFive = sortedGames.slice(0, 5);
+  const otherCount = other.reduce((sum, [, count]) => sum + count, 0);
+  if (otherCount > 0) {
+    labels.push("Other");
+    values.push(otherCount);
+  }
 
-const labels = topFive.map(([game]) => game);
-const values = topFive.map(([, count]) => count);
-
-return { labels, values, totalRuns };
+  return { labels, values };
 }
 
 function getMostPlayedConsolesData(memberName) {
   const memberRows = getMemberRows(memberName);
-  const memberRaces = getRacesForRunner(memberName);
   const consoleCounts = new Map();
 
   memberRows.forEach(row => {
     const consoleName = normalizeName(row.CONSOLE);
     if (!consoleName) return;
     consoleCounts.set(consoleName, (consoleCounts.get(consoleName) || 0) + 1);
-  });
-
-  memberRaces.forEach(race => {
-    const raceConsole = getConsoleForRace(race);
-    if (!raceConsole) return;
-
-    race.games.forEach(game => {
-      const cleanGame = normalizeName(game);
-      if (!cleanGame) return;
-      consoleCounts.set(raceConsole, (consoleCounts.get(raceConsole) || 0) + 1);
-    });
   });
 
   const sortedConsoles = [...consoleCounts.entries()]
@@ -503,36 +366,13 @@ function destroyMemberChart() {
   }
 }
 
-function getConsoleForRace(race) {
-  const eventName = normalizeName(race.eventName).toLowerCase();
-
-  if (eventName.includes("sega 8")) return "Genesis";
-  if (eventName.includes("mega 16")) return "Genesis";
-  if (eventName.includes("sega 16")) return "Genesis";
-  if (eventName.includes("master 8")) return "Master System";
-  if (eventName.includes("5g game gear")) return "Game Gear";
-  if (eventName.includes("saturn8lia")) return "Saturn";
-  if (eventName.includes("shinobi")) return "Genesis";
-
-  return "";
-}
-
 function getRacePlacements(race) {
-  const results = race.runners
-    .filter(runner => normalizeName(runner.name))
-    .map(runner => {
-      const seconds =
-        typeof runner.seconds === "number"
-          ? runner.seconds
-          : parseRaceFinishTime(runner.time);
-
-      return {
-        name: runner.name,
-        time: runner.time,
-        seconds,
-        isDNF: seconds === null
-      };
-    });
+  const results = race.runners.map(runner => ({
+    name: runner.name,
+    time: runner.time,
+    seconds: runner.seconds,
+    isDNF: runner.isDNF
+  }));
 
   results.sort((a, b) => {
     if (a.isDNF && b.isDNF) return 0;
@@ -548,13 +388,13 @@ function getRacePlacements(race) {
   }));
 }
 
-
 function getRaceStatsForRunner(memberName) {
   const memberRaces = getRacesForRunner(memberName);
 
   let racesWon = 0;
   let podiumFinishes = 0;
   let totalPlace = 0;
+  let totalFieldSize = 0;
   let countedRaces = 0;
   let totalRaceSeconds = 0;
   let completedRaces = 0;
@@ -563,13 +403,14 @@ function getRaceStatsForRunner(memberName) {
 	if (EXCLUDED_RACE_KEYS.has(race.key)) return; 
     const placements = getRacePlacements(race);
     const runnerResult = placements.find(
-  p => normalizeHandle(p.name) === normalizeHandle(memberName)
-);
+      p => normalizeHandle(p.name) === normalizeHandle(memberName)
+    );
 
-if (!runnerResult) return;
+    if (!runnerResult) return;
 
     countedRaces++;
     totalPlace += runnerResult.place;
+    totalFieldSize += runnerResult.fieldSize;
 
     if (runnerResult.place === 1) racesWon++;
     if (runnerResult.place <= 3) podiumFinishes++;
@@ -581,100 +422,24 @@ if (!runnerResult) return;
   });
 
   return {
-  racesWon,
-  podiumFinishes,
-  averageFinishText:
-    countedRaces > 0
-      ? `${(totalPlace / countedRaces).toFixed(2)}`
-      : "—",
-  averageFinishValue:
-    countedRaces > 0 ? totalPlace / countedRaces : null,
-  totalRaces: countedRaces,
-  averageRaceTimeSeconds:
-    completedRaces > 0 ? totalRaceSeconds / completedRaces : null,
-  averageRaceTimeDisplay:
-    completedRaces > 0
-      ? formatSecondsAsTime(totalRaceSeconds / completedRaces)
-      : "—",
-  completedRaces
-};
-}
-
-function getRaceGroupKey(race) {
-  const eventName = normalizeName(race.eventName).toLowerCase();
-
-  if (eventName.includes("master 8")) {
-    return "master8";
-  }
-
-  if (
-    eventName.includes("sega 8") ||
-    eventName.includes("sega 16") 
-    
-  ) {
-    return "sega8sega16";
-  }
-
-  if (eventName.includes("5g game gear")) {
-    return "5ggamegear";
-  }
-
-  return "";
-}
-
-function getRaceGroupLabel(groupKey) {
-  if (groupKey === "master8") return "MASTER 8";
-  if (groupKey === "sega8sega16") return "SEGA 8 / SEGA 16";
-  if (groupKey === "5ggamegear") return "5G GAME GEAR";
-  return "";
-}
-
-function getGroupedRaceTimeStatsForRunner(memberName, groupKey) {
-  const memberRaces = getRacesForRunner(memberName).filter(race => {
-    if (EXCLUDED_RACE_KEYS.has(race.key)) return false;
-    return getRaceGroupKey(race) === groupKey;
-  });
-
-  let totalRaceSeconds = 0;
-  let completedRaces = 0;
-
-  memberRaces.forEach(race => {
-    const placements = getRacePlacements(race);
-    const runnerResult = placements.find(
-      p => normalizeHandle(p.name) === normalizeHandle(memberName)
-    );
-
-    if (!runnerResult) return;
-
-    if (!runnerResult.isDNF && runnerResult.seconds !== null) {
-      totalRaceSeconds += runnerResult.seconds;
-      completedRaces++;
-    }
-  });
-
-  return {
-    completedRaces,
+    racesWon,
+    podiumFinishes,
+    averageFinishText:
+      countedRaces > 0
+        ? `${(totalPlace / countedRaces).toFixed(2)} / ${(totalFieldSize / countedRaces).toFixed(2)}`
+        : "—",
+    averageFinishValue:
+      countedRaces > 0 ? totalPlace / countedRaces : null,
     averageRaceTimeSeconds:
-      completedRaces > 0 ? totalRaceSeconds / completedRaces : null,
-    averageRaceTimeDisplay:
-      completedRaces > 0
-        ? formatSecondsAsTime(totalRaceSeconds / completedRaces)
-        : "—"
+  completedRaces > 0 ? totalRaceSeconds / completedRaces : null,
+
+averageRaceTimeDisplay:
+  completedRaces > 0
+    ? formatSecondsAsTime(totalRaceSeconds / completedRaces)
+    : "—",
+
+completedRaces
   };
-}
-
-function buildGroupedAverageRaceTimeRankingData(groupKey) {
-  return getAllRaceRunners().map(name => {
-    const stats = getGroupedRaceTimeStatsForRunner(name, groupKey);
-
-    return {
-      name,
-      value: stats.averageRaceTimeSeconds,
-      completedRaces: stats.completedRaces
-    };
-  })
-  .filter(item => item.value !== null && item.completedRaces >= 2)
-  .sort((a, b) => a.value - b.value);
 }
 
 function getAllRaceRunners() {
@@ -705,19 +470,25 @@ function buildRacePodiumRankingData() {
 }
 
 function buildAverageFinishRankingData() {
-  return getAllRaceRunners().map(name => {
-    const stats = getRaceStatsForRunner(name);
-
-    return {
-      name,
-      value: stats.averageFinishValue,
-      raceCount: stats.totalRaces
-    };
-  })
-  .filter(item => item.value !== null && item.raceCount >= 2)
+  return getAllRaceRunners().map(name => ({
+    name,
+    value: getRaceStatsForRunner(name).averageFinishValue
+  }))
+  .filter(item => item.value !== null)
   .sort((a, b) => a.value - b.value);
 }
 
+function buildAverageRaceTimeRankingData() {
+  return getAllRaceRunners().map(name => {
+    const stats = getRaceStatsForRunner(name);
+    return {
+      name,
+      value: stats.averageRaceTimeSeconds
+    };
+  })
+  .filter(item => item.value !== null)
+  .sort((a, b) => a.value - b.value); // LOWER is better
+}
 
 function getMedalCircle(rank) {
   if (rank === 1) return `<span class="sc-race-medal sc-race-medal-gold"></span>`;
@@ -732,49 +503,18 @@ function renderRaceStatsView(container, memberName) {
   const winsRanking = buildRaceWinsRankingData();
   const podiumRanking = buildRacePodiumRankingData();
   const avgFinishRanking = buildAverageFinishRankingData();
-
-  const master8Ranking = buildGroupedAverageRaceTimeRankingData("master8");
-  const sega8sega16Ranking = buildGroupedAverageRaceTimeRankingData("sega8sega16");
-  const gameGearRanking = buildGroupedAverageRaceTimeRankingData("5ggamegear");
-
-  const master8Stats = getGroupedRaceTimeStatsForRunner(memberName, "master8");
-  const sega8sega16Stats = getGroupedRaceTimeStatsForRunner(memberName, "sega8sega16");
-  const gameGearStats = getGroupedRaceTimeStatsForRunner(memberName, "5ggamegear");
+  const avgRaceTimeRanking = buildAverageRaceTimeRankingData();
+  const avgRaceTimeRank = getRankForMember(avgRaceTimeRanking, memberName);
 
   const winsRankInfo = getTieAwareRank(winsRanking, memberName);
   const podiumRankInfo = getTieAwareRank(podiumRanking, memberName);
   const avgFinishRank = getRankForMember(avgFinishRanking, memberName);
 
-  const master8Rank = getRankForMember(master8Ranking, memberName);
-  const sega8sega16Rank = getRankForMember(sega8sega16Ranking, memberName);
-  const gameGearRank = getRankForMember(gameGearRanking, memberName);
-
-  function renderRaceTimeBox(label, statsObj, rank) {
-  return `
-    <div class="sc-member-ranking-box">
-      <div class="sc-member-ranking-label">${escapeHtml(label)}</div>
-      <div class="sc-member-ranking-value">
-        ${rank ? getMedalCircle(rank) : ""}
-        ${escapeHtml(statsObj.averageRaceTimeDisplay)}
-      </div>
-      <div class="sc-member-ranking-sub">
-        ${
-  statsObj.completedRaces >= 2
-    ? `${rank ? `${escapeHtml(getOrdinal(rank))} fastest average` : "Rank unavailable"} (${escapeHtml(String(statsObj.completedRaces))} races)`
-    : "Minimum 2 races required"
-}
-      </div>
-    </div>
-  `;
-}
-
   container.innerHTML = `
     <div class="sc-member-rankings-grid">
       <div class="sc-member-ranking-box">
         <div class="sc-member-ranking-label">RACES WON</div>
-        <div class="sc-member-ranking-value">
-			${winsRankInfo ? getMedalCircle(winsRankInfo.rank) : ""}
-			${escapeHtml(String(stats.racesWon))}</div>
+        <div class="sc-member-ranking-value">${escapeHtml(String(stats.racesWon))}</div>
         <div class="sc-member-ranking-sub">
           ${winsRankInfo ? `${winsRankInfo.tied ? "Tied for " : ""}${escapeHtml(getOrdinal(winsRankInfo.rank))} most` : "—"}
         </div>
@@ -782,34 +522,33 @@ function renderRaceStatsView(container, memberName) {
 
       <div class="sc-member-ranking-box">
         <div class="sc-member-ranking-label">PODIUM FINISHES</div>
-        <div class="sc-member-ranking-value">
-			${podiumRankInfo ? getMedalCircle(podiumRankInfo.rank) : ""}
-			${escapeHtml(String(stats.podiumFinishes))}</div>
+        <div class="sc-member-ranking-value">${escapeHtml(String(stats.podiumFinishes))}</div>
         <div class="sc-member-ranking-sub">
           ${podiumRankInfo ? `${podiumRankInfo.tied ? "Tied for " : ""}${escapeHtml(getOrdinal(podiumRankInfo.rank))} most` : "—"}
         </div>
       </div>
 
       <div class="sc-member-ranking-box">
-  <div class="sc-member-ranking-label">AVERAGE RACE FINISH</div>
+        <div class="sc-member-ranking-label">AVERAGE RACE FINISH</div>
+        <div class="sc-member-ranking-value">
+          ${avgFinishRank ? getMedalCircle(avgFinishRank) : ""}
+          ${escapeHtml(stats.averageFinishText)}
+        </div>
+        <div class="sc-member-ranking-sub">
+          ${avgFinishRank ? `${escapeHtml(getOrdinal(avgFinishRank))} best average` : "—"}
+        </div>
+      </div>
+
+      <div class="sc-member-ranking-box">
+  <div class="sc-member-ranking-label">AVERAGE RACE TIME</div>
   <div class="sc-member-ranking-value">
-    ${avgFinishRank ? getMedalCircle(avgFinishRank) : ""}
-    ${escapeHtml(stats.averageFinishText)}
+    ${avgRaceTimeRank ? getMedalCircle(avgRaceTimeRank) : ""}
+    ${escapeHtml(stats.averageRaceTimeDisplay)}
   </div>
   <div class="sc-member-ranking-sub">
-    ${
-      stats.totalRaces >= 2
-        ? (avgFinishRank
-            ? `${escapeHtml(getOrdinal(avgFinishRank))} best average`
-            : "Rank unavailable")
-        : "Minimum 2 races required"
-    }
+    ${avgRaceTimeRank ? `${escapeHtml(getOrdinal(avgRaceTimeRank))} fastest average` : "—"}
   </div>
 </div>
-
-      ${renderRaceTimeBox("AVERAGE MASTER 8 TIME", master8Stats, master8Rank)}
-      ${renderRaceTimeBox("AVERAGE SEGA 8/16 TIME", sega8sega16Stats, sega8sega16Rank)}
-      ${renderRaceTimeBox("AVERAGE 5G GAME GEAR TIME", gameGearStats, gameGearRank)}
     </div>
   `;
 }
@@ -817,7 +556,8 @@ function renderRaceStatsView(container, memberName) {
 function renderMostPopularGamesChart(canvas, memberName) {
   destroyMemberChart();
 
-  const { labels, values, totalRuns } = getMostPopularGamesData(memberName);
+  const { labels, values } = getMostPopularGamesData(memberName);
+  const totalRuns = values.reduce((sum, value) => sum + value, 0);
 
   currentMemberChart = new Chart(canvas, {
     type: "pie",
@@ -900,20 +640,14 @@ function getTieAwareRank(rankingData, memberName) {
 }
 
 function buildEventsRankingData() {
-  const members = getUniqueMemberNames();
+  const members = getAllRunnerNames(allRows);
 
   return members.map(name => {
+    const rows = allRows.filter(row => rowIncludesRunner(row, name));
     const events = new Set();
 
-    allRows.forEach(row => {
-      if (!rowIncludesRunner(row, name)) return;
-
+    rows.forEach(row => {
       const eventName = normalizeName(row.EVENT);
-      if (eventName) events.add(eventName);
-    });
-
-    getRacesForRunner(name).forEach(race => {
-      const eventName = normalizeName(race.eventName);
       if (eventName) events.add(eventName);
     });
 
@@ -931,57 +665,6 @@ function closeRunModal() {
   document.body.style.overflow = "";
 }
 
-function buildRunDiversityRankingData() {
-  const members = getUniqueMemberNames();
-
-  return members.map(name => {
-    const runs = allRows.filter(row => rowIncludesRunner(row, name));
-    const races = getRacesForRunner(name);
-
-    const eventSet = new Set();
-
-    runs.forEach(row => {
-      const eventName = normalizeName(row.EVENT);
-      if (eventName) eventSet.add(eventName);
-    });
-
-    races.forEach(race => {
-      const eventName = normalizeName(race.eventName);
-      if (eventName) eventSet.add(eventName);
-    });
-
-    const totalRuns =
-      runs.length +
-      races.reduce((sum, race) => sum + race.games.length, 0);
-
-    const uniqueGames = new Set();
-
-    runs.forEach(row => {
-      const game = normalizeName(row.GAME);
-      if (game) uniqueGames.add(game);
-    });
-
-    races.forEach(race => {
-      race.games.forEach(game => {
-        const cleanGame = normalizeName(game);
-        if (cleanGame) uniqueGames.add(cleanGame);
-      });
-    });
-
-    if (!totalRuns || eventSet.size < 2) return null;
-
-    return {
-      name,
-      value: uniqueGames.size / totalRuns,
-      totalRuns,
-      uniqueGames: uniqueGames.size,
-      eventCount: eventSet.size
-    };
-  })
-  .filter(Boolean)
-  .sort((a, b) => b.value - a.value);
-}
-
 function getNamesFromColumns(row, prefix, maxCount) {
   const names = [];
   for (let i = 1; i <= maxCount; i++) {
@@ -992,7 +675,7 @@ function getNamesFromColumns(row, prefix, maxCount) {
 }
 
 function getRunnerNames(row) {
-  return getNamesFromColumns(row, "RUNNER", 21);
+  return getNamesFromColumns(row, "RUNNER", 16);
 }
 
 function buildTwitchLinksHtml(names) {
@@ -1024,170 +707,6 @@ function parseTimestampToSeconds(timestamp) {
   }
 
   return 0;
-}
-
-function extractYouTubeId(input) {
-  const raw = String(input || "").trim();
-  if (!raw) return "";
-
-  try {
-    const url = new URL(raw);
-
-    if (url.hostname.includes("youtu.be")) {
-      return url.pathname.split("/").filter(Boolean)[0] || "";
-    }
-
-    if (url.hostname.includes("youtube.com")) {
-      if (url.pathname === "/watch") {
-        return url.searchParams.get("v") || "";
-      }
-      if (url.pathname.startsWith("/embed/")) {
-        return url.pathname.split("/embed/")[1]?.split("/")[0] || "";
-      }
-      if (url.pathname.startsWith("/shorts/")) {
-        return url.pathname.split("/shorts/")[1]?.split("/")[0] || "";
-      }
-      if (url.pathname.startsWith("/live/")) {
-        return url.pathname.split("/live/")[1]?.split("/")[0] || "";
-      }
-    }
-  } catch {
-    const match = raw.match(
-      /(?:youtu\.be\/|youtube\.com\/watch\?v=|youtube\.com\/embed\/|youtube\.com\/shorts\/|youtube\.com\/live\/)([A-Za-z0-9_-]{11})/
-    );
-    return match ? match[1] : "";
-  }
-
-  return "";
-}
-
-function chunkArray(items, size) {
-  const chunks = [];
-  for (let i = 0; i < items.length; i += size) {
-    chunks.push(items.slice(i, i + size));
-  }
-  return chunks;
-}
-
-async function preloadAllVideoDurations() {
-  const ids = new Set();
-
-  // Main runs database
-  allRows.forEach(row => {
-    const id1 = extractYouTubeId(row.VIDEOURL);
-    const id2 = extractYouTubeId(row.VIDEOURL2);
-
-    if (id1) ids.add(id1);
-    if (id2) ids.add(id2);
-  });
-
-  // Races database
-  raceData.forEach(race => {
-    const raceId = extractYouTubeId(race.videoUrl);
-    if (raceId) ids.add(raceId);
-  });
-
-  const chunks = chunkArray([...ids], 50);
-
-  for (const chunk of chunks) {
-    try {
-      const response = await fetch(
-        `/api/youtube-durations?ids=${encodeURIComponent(chunk.join(","))}`
-      );
-
-      if (!response.ok) continue;
-
-      const data = await response.json();
-      const videos = data.videos || {};
-
-      Object.entries(videos).forEach(([id, info]) => {
-        if (info && typeof info.duration_seconds === "number") {
-          videoDurationMap.set(id, info.duration_seconds);
-        }
-      });
-    } catch (err) {
-      console.error("youtube-durations error:", err);
-    }
-  }
-}
-
-function getRowsWithVodForRunner(memberName) {
-  return allRows.filter(row => {
-    if (!rowIncludesRunner(row, memberName)) return false;
-    return !!extractYouTubeId(row.VIDEOURL) || !!extractYouTubeId(row.VIDEOURL2);
-  });
-}
-
-function getRaceVodRowsForRunner(memberName) {
-  return getRacesForRunner(memberName).filter(race => {
-    return !!extractYouTubeId(race.videoUrl);
-  });
-}
-
-function buildPlaytimeRankingData() {
-  const members = getUniqueMemberNames();
-
-  const ranking = members.map(name => {
-    let totalSeconds = 0;
-
-    // Main runs database
-    getRowsWithVodForRunner(name).forEach(row => {
-      const id1 = extractYouTubeId(row.VIDEOURL);
-      const id2 = extractYouTubeId(row.VIDEOURL2);
-
-      if (id1 && typeof videoDurationMap.get(id1) === "number") {
-        totalSeconds += videoDurationMap.get(id1);
-      }
-
-      if (id2 && typeof videoDurationMap.get(id2) === "number") {
-        totalSeconds += videoDurationMap.get(id2);
-      }
-    });
-
-    // Races database
-    getRaceVodRowsForRunner(name).forEach(race => {
-      const raceId = extractYouTubeId(race.videoUrl);
-
-      if (raceId && typeof videoDurationMap.get(raceId) === "number") {
-        totalSeconds += videoDurationMap.get(raceId);
-      }
-    });
-
-    return {
-      name,
-      value: totalSeconds
-    };
-  })
-  .filter(item => item.value > 0)
-  .sort((a, b) => b.value - a.value);
-
-  playtimeRankingData = ranking;
-  return ranking;
-}
-
-function getTotalPlaytimeStatsForRunner(memberName) {
-  const ranking = Array.isArray(playtimeRankingData) ? playtimeRankingData : [];
-
-  const totalAllSeconds = ranking.reduce((sum, item) => sum + item.value, 0);
-
-  const runnerEntry = ranking.find(
-    item => normalizeHandle(item.name) === normalizeHandle(memberName)
-  );
-
-  const rank = runnerEntry
-    ? ranking.findIndex(item => normalizeHandle(item.name) === normalizeHandle(memberName)) + 1
-    : null;
-
-  const totalSeconds = runnerEntry ? runnerEntry.value : 0;
-  const percentOfAll = totalAllSeconds > 0 ? (totalSeconds / totalAllSeconds) * 100 : 0;
-
-  return {
-    totalSeconds,
-    totalDisplay: totalSeconds > 0 ? formatSecondsAsTime(totalSeconds) : "—",
-    percentOfAll,
-    rank,
-    totalRunners: ranking.length
-  };
 }
 
 function getYouTubeEmbedUrl(url, timestamp) {
@@ -1273,7 +792,7 @@ function formatDifferenceFromLeader(diffSeconds) {
 function buildRaceResultsData(row, timePrefix) {
   const results = [];
 
-  for (let i = 1; i <= 21; i++) {
+  for (let i = 1; i <= 6; i++) {
     const runnerName = String(row[`RUNNER${i}`] || "").trim();
     const timeValue = String(row[`${timePrefix}${i}`] || "").trim();
 
@@ -1360,32 +879,8 @@ function openRunModal(row) {
   const embedUrl = getYouTubeEmbedUrl(row.VIDEOURL, row.TIMESTAMP);
   const embedUrl2 = getYouTubeEmbedUrl(row.VIDEOURL2, row.TIMESTAMP2);
 
-  let race1Data = [];
-let race2Data = [];
-
-if (row._isRaceDerived && row._race) {
-  const sorted = [...row._race.runners].sort((a, b) => {
-    if (a.isDNF && b.isDNF) return 0;
-    if (a.isDNF) return 1;
-    if (b.isDNF) return -1;
-    return a.seconds - b.seconds;
-  });
-
-  const fastestEntry = sorted.find(r => !r.isDNF);
-  const fastest = fastestEntry ? fastestEntry.seconds : null;
-
-  race1Data = sorted.map(item => ({
-    runner: item.name,
-    time: item.time || "DNF",
-    difference:
-      item.isDNF || fastest === null
-        ? null
-        : item.seconds - fastest
-  }));
-} else {
-  race1Data = buildRaceResultsData(row, "TIMERUNNER");
-  race2Data = buildRaceResultsData(row, "RACE2TIMERUNNER");
-}
+  const race1Data = buildRaceResultsData(row, "TIMERUNNER");
+  const race2Data = buildRaceResultsData(row, "RACE2TIMERUNNER");
 
   const eventName = String(row.EVENT || "").trim();
 
@@ -1478,20 +973,6 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-document.addEventListener("keydown", (e) => {
-  if (!dropdown.classList.contains("open")) return;
-  if (e.key.length !== 1 || e.ctrlKey || e.metaKey || e.altKey) return;
-
-  memberTypeSearch += e.key.toLowerCase();
-
-  clearTimeout(memberTypeSearchTimer);
-  memberTypeSearchTimer = setTimeout(() => {
-    memberTypeSearch = "";
-  }, 900);
-
-  scrollMemberMatchIntoView(memberTypeSearch);
-});
-
 prevBtn.addEventListener("click", () => {
   if (currentMemberRunIndex > 0) {
     currentMemberRunIndex--;
@@ -1509,7 +990,7 @@ nextBtn.addEventListener("click", () => {
 function rowIncludesCommentary(row, memberName) {
   const target = normalizeHandle(memberName);
 
-  for (let i = 1; i <= 21; i++) {
+  for (let i = 1; i <= 16; i++) {
     const commentary = normalizeHandle(row[`COMMENTARY${i}`]);
     if (commentary === target) return true;
   }
@@ -1520,7 +1001,7 @@ function rowIncludesCommentary(row, memberName) {
 function getRunnerNamesPlain(row) {
   const names = [];
 
-  for (let i = 1; i <= 21; i++) {
+  for (let i = 1; i <= 16; i++) {
     const runner = normalizeName(row[`RUNNER${i}`]);
     if (runner) names.push(runner);
   }
@@ -1532,7 +1013,7 @@ function getAllRunnerNames(rows) {
   const names = new Set();
 
   rows.forEach(row => {
-    for (let i = 1; i <= 21; i++) {
+    for (let i = 1; i <= 16; i++) {
       const runner = normalizeName(row[`RUNNER${i}`]);
       if (runner) names.add(runner);
     }
@@ -1548,43 +1029,25 @@ function getOrdinal(n) {
 }
 
 function buildRunsRankingData() {
-  const members = getUniqueMemberNames();
+  const members = getAllRunnerNames(allRows);
 
-  return members.map(name => {
-    const normalRunCount = allRows.filter(row => rowIncludesRunner(row, name)).length;
-
-    const raceRunCount = getRacesForRunner(name)
-      .reduce((sum, race) => sum + race.games.length, 0);
-
-    return {
-      name,
-      value: normalRunCount + raceRunCount
-    };
-  })
+  return members.map(name => ({
+    name,
+    value: allRows.filter(row => rowIncludesRunner(row, name)).length
+  }))
   .sort((a, b) => b.value - a.value);
 }
 
 function buildUniqueGamesRankingData() {
-  const members = getUniqueMemberNames();
+  const members = getAllRunnerNames(allRows);
 
   return members.map(name => {
+    const rows = allRows.filter(row => rowIncludesRunner(row, name));
     const games = new Set();
 
-    // runs database
-    allRows.forEach(row => {
-      if (rowIncludesRunner(row, name)) {
-        const game = normalizeName(row.GAME);
-        if (game) games.add(game);
-      }
-    });
-
-    // Races database
-    const memberRaces = getRacesForRunner(name);
-    memberRaces.forEach(race => {
-      race.games.forEach(game => {
-        const cleanGame = normalizeName(game);
-        if (cleanGame) games.add(cleanGame);
-      });
+    rows.forEach(row => {
+      const game = normalizeName(row.GAME);
+      if (game) games.add(game);
     });
 
     return {
@@ -1592,100 +1055,6 @@ function buildUniqueGamesRankingData() {
       value: games.size
     };
   })
-  .sort((a, b) => b.value - a.value);
-}
-
-function getActiveDateRangeForRunner(memberName) {
-  const dates = [];
-
-  allRows.forEach(row => {
-    if (!rowIncludesRunner(row, memberName)) return;
-
-    const date = parseEventDate(row.DATE);
-    if (date instanceof Date && !Number.isNaN(date.getTime())) {
-      dates.push(date);
-    }
-  });
-
-  getRacesForRunner(memberName).forEach(race => {
-    const date = parseEventDate(race.date);
-    if (date instanceof Date && !Number.isNaN(date.getTime())) {
-      dates.push(date);
-    }
-  });
-
-  if (!dates.length) {
-    return null;
-  }
-
-  dates.sort((a, b) => a - b);
-
-  return {
-    firstDate: dates[0],
-    lastDate: dates[dates.length - 1],
-    daysActive: Math.max(1, Math.floor((dates[dates.length - 1] - dates[0]) / 86400000))
-  };
-}
-
-function formatActiveDuration(firstDate, lastDate) {
-  if (!firstDate || !lastDate) return "—";
-
-  let years = lastDate.getFullYear() - firstDate.getFullYear();
-  let months = lastDate.getMonth() - firstDate.getMonth();
-  let days = lastDate.getDate() - firstDate.getDate();
-
-  if (days < 0) {
-    months--;
-
-    const previousMonthLastDay = new Date(
-      lastDate.getFullYear(),
-      lastDate.getMonth(),
-      0
-    ).getDate();
-
-    days += previousMonthLastDay;
-  }
-
-  if (months < 0) {
-    years--;
-    months += 12;
-  }
-
-  if (years === 0 && months === 0 && days === 0) {
-    days = 1;
-  }
-
-  const parts = [];
-
-  if (years > 0) {
-    parts.push(`${years} ${years === 1 ? "year" : "years"}`);
-  }
-
-  if (months > 0) {
-    parts.push(`${months} ${months === 1 ? "month" : "months"}`);
-  }
-
-  if (days > 0 || !parts.length) {
-    parts.push(`${days} ${days === 1 ? "day" : "days"}`);
-  }
-
-  return parts.join(", ");
-}
-
-function buildTimeActiveRankingData() {
-  const members = getUniqueMemberNames();
-
-  return members.map(name => {
-    const range = getActiveDateRangeForRunner(name);
-
-    return {
-      name,
-      value: range ? range.daysActive : null,
-      firstDate: range?.firstDate || null,
-      lastDate: range?.lastDate || null
-    };
-  })
-  .filter(item => item.value !== null)
   .sort((a, b) => b.value - a.value);
 }
 
@@ -1715,26 +1084,20 @@ function renderRankingsView(container, memberName) {
   const runsRanking = buildRunsRankingData();
   const uniqueGamesRanking = buildUniqueGamesRankingData();
   const eventsRanking = buildEventsRankingData();
-  const diversityRanking = buildRunDiversityRankingData();
-  const timeActiveRanking = buildTimeActiveRankingData();
 
   const selectedRuns = runsRanking.find(item => normalizeHandle(item.name) === normalizeHandle(memberName));
   const selectedGames = uniqueGamesRanking.find(item => normalizeHandle(item.name) === normalizeHandle(memberName));
   const selectedEvents = eventsRanking.find(item => normalizeHandle(item.name) === normalizeHandle(memberName));
-  const selectedDiversity = diversityRanking.find(item => normalizeHandle(item.name) === normalizeHandle(memberName));
-  const selectedTimeActive = timeActiveRanking.find(item => normalizeHandle(item.name) === normalizeHandle(memberName));
 
   const runsRankInfo = getTieAwareRank(runsRanking, memberName);
   const gamesRankInfo = getTieAwareRank(uniqueGamesRanking, memberName);
   const eventsRankInfo = getTieAwareRank(eventsRanking, memberName);
-  const diversityRankInfo = getTieAwareRank(diversityRanking, memberName);
-  const timeActiveRankInfo = getTieAwareRank(timeActiveRanking, memberName);
 
   const totalMembers = runsRanking.length;
 
   function rankText(rankInfo) {
     if (!rankInfo) return "—";
-    const base = `${getOrdinal(rankInfo.rank)} out of ${totalMembers} members`;
+    const base = `${getOrdinal(rankInfo.rank)} most out of ${totalMembers} members`;
     return rankInfo.tied ? `Tied for ${base}` : base;
   }
 
@@ -1742,62 +1105,22 @@ function renderRankingsView(container, memberName) {
     <div class="sc-member-rankings-grid">
       <div class="sc-member-ranking-box">
         <div class="sc-member-ranking-label">NUMBER OF RUNS</div>
-        <div class="sc-member-ranking-value">
-  ${runsRankInfo ? getMedalCircle(runsRankInfo.rank) : ""}
-  ${escapeHtml(String(selectedRuns?.value ?? 0))}
-</div>
+        <div class="sc-member-ranking-value">${escapeHtml(String(selectedRuns?.value ?? 0))}</div>
         <div class="sc-member-ranking-sub">${escapeHtml(rankText(runsRankInfo))}</div>
       </div>
 
       <div class="sc-member-ranking-box">
         <div class="sc-member-ranking-label">UNIQUE GAMES</div>
-        <div class="sc-member-ranking-value">
-  ${gamesRankInfo ? getMedalCircle(gamesRankInfo.rank) : ""}
-  ${escapeHtml(String(selectedGames?.value ?? 0))}
-</div>
+        <div class="sc-member-ranking-value">${escapeHtml(String(selectedGames?.value ?? 0))}</div>
         <div class="sc-member-ranking-sub">${escapeHtml(rankText(gamesRankInfo))}</div>
       </div>
 
       <div class="sc-member-ranking-box">
         <div class="sc-member-ranking-label">UNIQUE EVENTS</div>
-        <div class="sc-member-ranking-value">
-  ${eventsRankInfo ? getMedalCircle(eventsRankInfo.rank) : ""}
-  ${escapeHtml(String(selectedEvents?.value ?? 0))}
-</div>
+        <div class="sc-member-ranking-value">${escapeHtml(String(selectedEvents?.value ?? 0))}</div>
         <div class="sc-member-ranking-sub">${escapeHtml(rankText(eventsRankInfo))}</div>
       </div>
-    
-    
-    <div class="sc-member-ranking-box">
-  <div class="sc-member-ranking-label">RUN DIVERSITY</div>
-  <div class="sc-member-ranking-value">
-    ${diversityRankInfo ? getMedalCircle(diversityRankInfo.rank) : ""}
-    ${selectedDiversity
-      ? escapeHtml(Math.round(selectedDiversity.value * 100) + "%")
-      : "—"}
-  </div>
-  <div class="sc-member-ranking-sub">
-    ${
-      diversityRankInfo
-        ? `${diversityRankInfo.tied ? "Tied for " : ""}${escapeHtml(getOrdinal(diversityRankInfo.rank))} most diverse out of ${totalMembers} members`
-        : "Minimum 2 events required"
-    }
-  </div>
-</div>
-    
-          <div class="sc-member-stat sc-member-stat-full">
-  <div class="sc-member-ranking-label">TIME ACTIVE</div>
-  <div class="sc-member-ranking-value">
-    ${timeActiveRankInfo ? getMedalCircle(timeActiveRankInfo.rank) : ""}
-    ${selectedTimeActive
-      ? escapeHtml(formatActiveDuration(selectedTimeActive.firstDate, selectedTimeActive.lastDate))
-      : "—"}
-  </div>
-  <div class="sc-member-ranking-sub">
-    ${timeActiveRankInfo ? `${timeActiveRankInfo.tied ? "Tied for " : ""}${escapeHtml(getOrdinal(timeActiveRankInfo.rank))} longest out of ${totalMembers} members` : "—"}
-  </div>
-</div>
-    
+    </div>
   `;
 }
 
@@ -1814,14 +1137,9 @@ function setupMemberVisuals(visualCard, memberName) {
   }
 
   function openMenu() {
-  dropdown.classList.add("open");
-  trigger.setAttribute("aria-expanded", "true");
-
-  requestAnimationFrame(() => {
-    scrollSelectedMemberIntoView();
-  });
-}
-  
+    dropdown.classList.add("open");
+    trigger.setAttribute("aria-expanded", "true");
+  }
 
   function showChart() {
     canvas.style.display = "block";
@@ -1836,21 +1154,13 @@ function setupMemberVisuals(visualCard, memberName) {
   }
 
   trigger.addEventListener("click", (e) => {
-  e.stopPropagation();
-
-  if (isMobileMemberPickerMode()) {
-    closeMenu();
-    openMobileMemberPicker();
-    return;
-  }
-
-  if (dropdown.classList.contains("open")) {
-    closeMenu();
-  } else {
-    openMenu();
-  }
-});
-  
+    e.stopPropagation();
+    if (dropdown.classList.contains("open")) {
+      closeMenu();
+    } else {
+      openMenu();
+    }
+  });
 
   document.addEventListener("click", (e) => {
     if (!dropdown.contains(e.target)) {
@@ -2024,33 +1334,12 @@ function setupMemberVisuals(visualCard, memberName) {
   return null;
 }
 
-function normalizeRaceGameId(gameId) {
-  const raw = normalizeName(gameId).toUpperCase();
-  if (!raw) return "";
-
-  return raw.replace(/[A-Z]+$/, "");
-}
-
-function getRaceGameDedupKey(row) {
-  const gameId = normalizeName(row.GAMEID);
-  const game = normalizeName(row.GAME);
-
-  if (gameId) {
-    const normalizedId = normalizeRaceGameId(gameId);
-    if (normalizedId) return normalizedId;
-  }
-
-  return game;
-}
-
 function buildRaceDatabase(rows) {
   const races = [];
   let currentRace = null;
-  let currentRaceSeenGameKeys = new Set();
 
   rows.forEach(row => {
     const eventId = normalizeName(row.EVENTID);
-    const key = normalizeName(row.KEY);
     const eventName = normalizeName(row.EVENT);
     const game = normalizeName(row.GAME);
     const videoUrl = normalizeName(row.VIDEOURL);
@@ -2063,42 +1352,37 @@ function buildRaceDatabase(rows) {
 
       const runners = [];
 
-      for (let i = 1; i <= 21; i++) {
+      for (let i = 1; i <= 6; i++) {
         const name = normalizeName(row[`RUNNER${i}`]);
         const rawTime = normalizeName(row[`RUNNER${i}TIME`]);
 
-        if (!name) continue;
+        if (name) {
+          const parsedSeconds = parseRaceFinishTime(rawTime);
 
-        const parsedSeconds = parseRaceFinishTime(rawTime);
-
-        runners.push({
-          name,
-          time: rawTime || "",
-          seconds: parsedSeconds,
-          isDNF: parsedSeconds === null
-        });
+          runners.push({
+            name,
+            time: rawTime || "",
+            seconds: parsedSeconds,
+            isDNF: rawTime !== "" && parsedSeconds === null
+          });
+        }
       }
 
-      currentRace = {
-        eventId,
-        key,
-        eventName,
-        date,
-        videoUrl,
-        runners,
-        games: []
-      };
+      const key = normalizeName(row.KEY);
 
-      currentRaceSeenGameKeys = new Set();
+currentRace = {
+  eventId,
+  key,
+  eventName,
+  date,
+  videoUrl,
+  runners,
+  games: []
+};
     }
 
     if (currentRace && game) {
-      const dedupKey = getRaceGameDedupKey(row);
-
-      if (!currentRaceSeenGameKeys.has(dedupKey)) {
-        currentRace.games.push(game);
-        currentRaceSeenGameKeys.add(dedupKey);
-      }
+      currentRace.games.push(game);
     }
   });
 
@@ -2173,7 +1457,7 @@ function getRacesForRunner(memberName) {
 
   wrap.appendChild(card);
   content.appendChild(wrap);
-  await renderMemberSummary(name);
+  renderMemberSummary(name);
   renderMemberRunsTable(name);
   renderMemberCommentaryTable(name);
 
@@ -2188,10 +1472,8 @@ function getRacesForRunner(memberName) {
   }
 }
 
-async function renderMemberSummary(memberName) {
+function renderMemberSummary(memberName) {
   const summary = buildMemberSummary(memberName);
-  console.log("playtimeRankingData at render:", playtimeRankingData);
-  const playtimeStats = getTotalPlaytimeStatsForRunner(memberName);
 
   const wrap = document.createElement("div");
   wrap.className = "sc-member-summary-wrap";
@@ -2203,47 +1485,34 @@ async function renderMemberSummary(memberName) {
     <h3 class="sc-member-summary-title">RUNNER SUMMARY</h3>
     <div class="sc-member-summary-grid">
       <div class="sc-member-stat">
-        <p class="sc-member-ranking-label">First Event</p>
-        <p class="sc-member-ranking-value text-value">${escapeHtml(summary.firstEvent)}</p>
+        <p class="sc-member-stat-label">First Event</p>
+        <p class="sc-member-stat-value">${escapeHtml(summary.firstEvent)}</p>
       </div>
 
       <div class="sc-member-stat">
-        <p class="sc-member-ranking-label">Most Recent Event</p>
-        <p class="sc-member-ranking-value text-value">${escapeHtml(summary.lastEvent)}</p>
+        <p class="sc-member-stat-label">Most Recent Event</p>
+        <p class="sc-member-stat-value">${escapeHtml(summary.lastEvent)}</p>
       </div>
 
       <div class="sc-member-stat">
-        <p class="sc-member-ranking-label">Most Played Game</p>
-        <p class="sc-member-ranking-value text-value">${summary.mostPlayedGameDisplay}</p>
+        <p class="sc-member-stat-label">Most Played Game</p>
+        <p class="sc-member-stat-value">${summary.mostPlayedGameDisplay}</p>
       </div>
 
       <div class="sc-member-stat">
-        <p class="sc-member-ranking-label">Most Played Console</p>
-        <p class="sc-member-ranking-value text-value">${escapeHtml(summary.mostPlayedConsole)}</p>
+        <p class="sc-member-stat-label">Most Played Console</p>
+        <p class="sc-member-stat-value">${escapeHtml(summary.mostPlayedConsole)}</p>
       </div>
 
       <div class="sc-member-stat">
-        <p class="sc-member-ranking-label">Number of Consoles Showcased</p>
-        <p class="sc-member-ranking-value">${escapeHtml(String(summary.consoleShowcaseCount))}</p>
+        <p class="sc-member-stat-label">Number of Consoles Showcased</p>
+        <p class="sc-member-stat-value">${escapeHtml(String(summary.consoleShowcaseCount))}</p>
       </div>
 
       <div class="sc-member-stat">
-        <p class="sc-member-ranking-label">Total Races</p>
-        <p class="sc-member-ranking-value">${escapeHtml(summary.totalRaces)}</p>
+        <p class="sc-member-stat-label">Total Races</p>
+        <p class="sc-member-stat-value">${escapeHtml(summary.totalRaces)}</p>
       </div>
-      
-      <div class="sc-member-stat sc-member-stat-full">
-  <p class="sc-member-ranking-label">Total Playtime</p>
-  <p class="sc-member-ranking-value">
-    ${escapeHtml(playtimeStats.totalDisplay)}
-  </p>
-  <p class="sc-member-ranking-sub">
-    ${playtimeStats.totalSeconds > 0
-  ? `${playtimeStats.percentOfAll.toFixed(1)}% of total Sega Crew playtime (${playtimeStats.rank ? `${escapeHtml(getOrdinal(playtimeStats.rank))} out of ${escapeHtml(String(playtimeStats.totalRunners))}` : "unranked"})`
-  : "No VOD playtime available"}
-  </p>
-</div>
-      
     </div>
   `;
 
@@ -2301,29 +1570,12 @@ function renderMemberRunsTable(memberName) {
       VIDEOURL2: "",
       TIMESTAMP: "",
       TIMESTAMP2: "",
-      _isRaceDerived: true,
-      _race: race,
       RUNNER1: race.runners[0]?.name || "",
       RUNNER2: race.runners[1]?.name || "",
       RUNNER3: race.runners[2]?.name || "",
       RUNNER4: race.runners[3]?.name || "",
       RUNNER5: race.runners[4]?.name || "",
       RUNNER6: race.runners[5]?.name || "",
-      RUNNER7: race.runners[6]?.name || "",
-      RUNNER8: race.runners[7]?.name || "",
-      RUNNER9: race.runners[8]?.name || "",
-      RUNNER10: race.runners[9]?.name || "",
-      RUNNER11: race.runners[10]?.name || "",
-      RUNNER12: race.runners[11]?.name || "",
-      RUNNER13: race.runners[12]?.name || "",
-      RUNNER14: race.runners[13]?.name || "",
-      RUNNER15: race.runners[14]?.name || "",
-      RUNNER16: race.runners[15]?.name || "",
-      RUNNER17: race.runners[16]?.name || "",
-      RUNNER18: race.runners[17]?.name || "",
-      RUNNER19: race.runners[18]?.name || "",
-      RUNNER20: race.runners[19]?.name || "",
-      RUNNER21: race.runners[20]?.name || "",
       COMMENTARY1: "",
       COMMENTARY2: "",
       COMMENTARY3: "",
@@ -2367,8 +1619,8 @@ function renderMemberRunsTable(memberName) {
       <th>GAME</th>
       <th>EVENT</th>
       <th>DATE</th>
-      <th>RUN TYPE</th>
-      <th>CATEGORY</th>
+      <th>RUNTYPE</th>
+      <th>SPEEDRUNTYPE</th>
     </tr>
   `;
 
@@ -2475,45 +1727,15 @@ function renderMemberCommentaryTable(memberName) {
   content.appendChild(wrap);
 }
 
-window.debugRacePlacementsForRunner = function(memberName) {
-  const target = normalizeHandle(memberName);
-
-  const races = raceData.filter(race =>
-    race.runners.some(r => normalizeHandle(r.name) === target)
-  );
-
-  console.log("Race count:", races.length);
-
-  races.forEach(race => {
-    if (EXCLUDED_RACE_KEYS.has(race.key)) return;
-
-    const placements = getRacePlacements(race);
-    const result = placements.find(p => normalizeHandle(p.name) === target);
-
-    console.log({
-      event: race.eventName,
-      key: race.key,
-      runnerFound: !!result,
-      runnerPlace: result?.place,
-      runnerTime: result?.time,
-      runnerSeconds: result?.seconds,
-      fieldSize: result?.fieldSize,
-      rawRunners: race.runners,
-      placements
-    });
-  });
-};
-
-
   function setSelected(name) {
     trigger.textContent = name || "Select a member";
     trigger.dataset.value = name || "";
     closeMenu();
     renderMember(name);
   }
-  
+
   function handleMembersLoaded() {
-    const uniqueMembers = getUniqueMemberNames();
+    const uniqueMembers = getUniqueMemberNames(allRows);
 
     menu.innerHTML = "";
     trigger.textContent = "Select a member";
@@ -2536,10 +1758,9 @@ window.debugRacePlacementsForRunner = function(memberName) {
       item.type = "button";
       item.className = "sc-dropdown-item";
       item.textContent = name;
-item.title = name;
-item.dataset.value = name;
-item.addEventListener("click", () => setSelected(name));
-menu.appendChild(item);
+      item.title = name;
+      item.addEventListener("click", () => setSelected(name));
+      menu.appendChild(item);
     });
   }
 
@@ -2551,21 +1772,6 @@ menu.appendChild(item);
       openMenu();
     }
   });
-  
-  document.addEventListener("keydown", (e) => {
-  if (!dropdown.classList.contains("open")) return;
-
-  if (e.key.length !== 1 || e.ctrlKey || e.metaKey || e.altKey) return;
-
-  memberTypeSearch += e.key.toLowerCase();
-
-  clearTimeout(memberTypeSearchTimer);
-  memberTypeSearchTimer = setTimeout(() => {
-    memberTypeSearch = "";
-  }, 900);
-
-  scrollMemberMatchIntoView(memberTypeSearch);
-});
 
   document.addEventListener("click", (e) => {
     if (!dropdown.contains(e.target)) {
@@ -2592,10 +1798,6 @@ menu.appendChild(item);
     raceData = buildRaceDatabase(extraRows);
 
     allRows = await loadCsv(CSV_URL);
-    await preloadAllVideoDurations();
-    buildPlaytimeRankingData();
-    console.log("playtimeRankingData built:", playtimeRankingData.length);
-    
     handleMembersLoaded();
   } catch (err) {
     console.error("Papa Parse member CSV error:", err);
