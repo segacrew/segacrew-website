@@ -65,6 +65,9 @@ const EXTRA_CSV_URL = IS_LOCAL
   const menu = document.createElement("div");
   menu.className = "sc-dropdown-menu";
   menu.setAttribute("role", "listbox");
+  
+  let memberTypeSearch = "";
+  let memberTypeSearchTimer = null;
 
   dropdown.appendChild(trigger);
   dropdown.appendChild(menu);
@@ -105,9 +108,44 @@ const nextBtn = modal.querySelector(".sc-modal-next");
   }
 
   function openMenu() {
-    dropdown.classList.add("open");
-    trigger.setAttribute("aria-expanded", "true");
+  dropdown.classList.add("open");
+  trigger.setAttribute("aria-expanded", "true");
+
+  requestAnimationFrame(() => {
+    scrollSelectedMemberIntoView();
+  });
+}
+  
+  function scrollSelectedMemberIntoView() {
+  const selectedName = normalizeName(trigger.dataset.value);
+  if (!selectedName) return;
+
+  const selectedItem = [...menu.querySelectorAll(".sc-dropdown-item")].find(
+    item => normalizeName(item.dataset.value) === selectedName
+  );
+
+  if (selectedItem) {
+    selectedItem.scrollIntoView({
+      block: "center"
+    });
   }
+}
+
+function scrollMemberMatchIntoView(query) {
+  const cleanQuery = normalizeName(query).toLowerCase();
+  if (!cleanQuery) return;
+
+  const match = [...menu.querySelectorAll(".sc-dropdown-item")].find(item => {
+    const value = normalizeName(item.dataset.value || item.textContent).toLowerCase();
+    return value.startsWith(cleanQuery);
+  });
+
+  if (match) {
+    match.scrollIntoView({
+      block: "center"
+    });
+  }
+}
 
   function escapeHtml(value) {
     return String(value ?? "")
@@ -261,16 +299,26 @@ function buildMemberSummary(memberName) {
   });
 
   memberRaces.forEach(race => {
-    if (race.eventName) eventSet.add(race.eventName);
+  if (race.eventName) eventSet.add(race.eventName);
 
-    race.games.forEach(game => {
-      const cleanGame = normalizeName(game);
-      if (!cleanGame) return;
+  const raceConsole = getConsoleForRace(race);
 
-      gameSet.add(cleanGame);
-      gameCounts.set(cleanGame, (gameCounts.get(cleanGame) || 0) + 1);
-    });
+  if (raceConsole) {
+    consoleSet.add(raceConsole);
+  }
+
+  race.games.forEach(game => {
+    const cleanGame = normalizeName(game);
+    if (!cleanGame) return;
+
+    gameSet.add(cleanGame);
+    gameCounts.set(cleanGame, (gameCounts.get(cleanGame) || 0) + 1);
+
+    if (raceConsole) {
+      consoleCounts.set(raceConsole, (consoleCounts.get(raceConsole) || 0) + 1);
+    }
   });
+});
 
   let mostPlayedGame = "—";
   let mostPlayedGameCount = 0;
@@ -349,22 +397,17 @@ function getMostPopularGamesData(memberName) {
     });
   });
 
-  const sortedGames = [...gameCounts.entries()]
-    .sort((a, b) => b[1] - a[1]);
+const sortedGames = [...gameCounts.entries()]
+  .sort((a, b) => b[1] - a[1]);
 
-  const topFive = sortedGames.slice(0, 5);
-  const other = sortedGames.slice(5);
+const totalRuns = sortedGames.reduce((sum, [, count]) => sum + count, 0);
 
-  const labels = topFive.map(([game]) => game);
-  const values = topFive.map(([, count]) => count);
+const topFive = sortedGames.slice(0, 5);
 
-  const otherCount = other.reduce((sum, [, count]) => sum + count, 0);
-  if (otherCount > 0) {
-    labels.push("Other");
-    values.push(otherCount);
-  }
+const labels = topFive.map(([game]) => game);
+const values = topFive.map(([, count]) => count);
 
-  return { labels, values };
+return { labels, values, totalRuns };
 }
 
 function getMostPlayedConsolesData(memberName) {
@@ -721,8 +764,7 @@ function renderRaceStatsView(container, memberName) {
 function renderMostPopularGamesChart(canvas, memberName) {
   destroyMemberChart();
 
-  const { labels, values } = getMostPopularGamesData(memberName);
-  const totalRuns = values.reduce((sum, value) => sum + value, 0);
+  const { labels, values, totalRuns } = getMostPopularGamesData(memberName);
 
   currentMemberChart = new Chart(canvas, {
     type: "pie",
@@ -805,14 +847,20 @@ function getTieAwareRank(rankingData, memberName) {
 }
 
 function buildEventsRankingData() {
-  const members = getAllRunnerNames(allRows);
+  const members = getUniqueMemberNames();
 
   return members.map(name => {
-    const rows = allRows.filter(row => rowIncludesRunner(row, name));
     const events = new Set();
 
-    rows.forEach(row => {
+    allRows.forEach(row => {
+      if (!rowIncludesRunner(row, name)) return;
+
       const eventName = normalizeName(row.EVENT);
+      if (eventName) events.add(eventName);
+    });
+
+    getRacesForRunner(name).forEach(race => {
+      const eventName = normalizeName(race.eventName);
       if (eventName) events.add(eventName);
     });
 
@@ -828,6 +876,57 @@ function closeRunModal() {
   modal.classList.remove("open");
   modalBody.innerHTML = "";
   document.body.style.overflow = "";
+}
+
+function buildRunDiversityRankingData() {
+  const members = getUniqueMemberNames();
+
+  return members.map(name => {
+    const runs = allRows.filter(row => rowIncludesRunner(row, name));
+    const races = getRacesForRunner(name);
+
+    const eventSet = new Set();
+
+    runs.forEach(row => {
+      const eventName = normalizeName(row.EVENT);
+      if (eventName) eventSet.add(eventName);
+    });
+
+    races.forEach(race => {
+      const eventName = normalizeName(race.eventName);
+      if (eventName) eventSet.add(eventName);
+    });
+
+    const totalRuns =
+      runs.length +
+      races.reduce((sum, race) => sum + race.games.length, 0);
+
+    const uniqueGames = new Set();
+
+    runs.forEach(row => {
+      const game = normalizeName(row.GAME);
+      if (game) uniqueGames.add(game);
+    });
+
+    races.forEach(race => {
+      race.games.forEach(game => {
+        const cleanGame = normalizeName(game);
+        if (cleanGame) uniqueGames.add(cleanGame);
+      });
+    });
+
+    if (!totalRuns || eventSet.size < 2) return null;
+
+    return {
+      name,
+      value: uniqueGames.size / totalRuns,
+      totalRuns,
+      uniqueGames: uniqueGames.size,
+      eventCount: eventSet.size
+    };
+  })
+  .filter(Boolean)
+  .sort((a, b) => b.value - a.value);
 }
 
 function getNamesFromColumns(row, prefix, maxCount) {
@@ -1208,8 +1307,32 @@ function openRunModal(row) {
   const embedUrl = getYouTubeEmbedUrl(row.VIDEOURL, row.TIMESTAMP);
   const embedUrl2 = getYouTubeEmbedUrl(row.VIDEOURL2, row.TIMESTAMP2);
 
-  const race1Data = buildRaceResultsData(row, "TIMERUNNER");
-  const race2Data = buildRaceResultsData(row, "RACE2TIMERUNNER");
+  let race1Data = [];
+let race2Data = [];
+
+if (row._isRaceDerived && row._race) {
+  const sorted = [...row._race.runners].sort((a, b) => {
+    if (a.isDNF && b.isDNF) return 0;
+    if (a.isDNF) return 1;
+    if (b.isDNF) return -1;
+    return a.seconds - b.seconds;
+  });
+
+  const fastestEntry = sorted.find(r => !r.isDNF);
+  const fastest = fastestEntry ? fastestEntry.seconds : null;
+
+  race1Data = sorted.map(item => ({
+    runner: item.name,
+    time: item.time || "DNF",
+    difference:
+      item.isDNF || fastest === null
+        ? null
+        : item.seconds - fastest
+  }));
+} else {
+  race1Data = buildRaceResultsData(row, "TIMERUNNER");
+  race2Data = buildRaceResultsData(row, "RACE2TIMERUNNER");
+}
 
   const eventName = String(row.EVENT || "").trim();
 
@@ -1302,6 +1425,20 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
+document.addEventListener("keydown", (e) => {
+  if (!dropdown.classList.contains("open")) return;
+  if (e.key.length !== 1 || e.ctrlKey || e.metaKey || e.altKey) return;
+
+  memberTypeSearch += e.key.toLowerCase();
+
+  clearTimeout(memberTypeSearchTimer);
+  memberTypeSearchTimer = setTimeout(() => {
+    memberTypeSearch = "";
+  }, 900);
+
+  scrollMemberMatchIntoView(memberTypeSearch);
+});
+
 prevBtn.addEventListener("click", () => {
   if (currentMemberRunIndex > 0) {
     currentMemberRunIndex--;
@@ -1360,10 +1497,17 @@ function getOrdinal(n) {
 function buildRunsRankingData() {
   const members = getUniqueMemberNames();
 
-  return members.map(name => ({
-    name,
-    value: allRows.filter(row => rowIncludesRunner(row, name)).length
-  }))
+  return members.map(name => {
+    const normalRunCount = allRows.filter(row => rowIncludesRunner(row, name)).length;
+
+    const raceRunCount = getRacesForRunner(name)
+      .reduce((sum, race) => sum + race.games.length, 0);
+
+    return {
+      name,
+      value: normalRunCount + raceRunCount
+    };
+  })
   .sort((a, b) => b.value - a.value);
 }
 
@@ -1398,6 +1542,100 @@ function buildUniqueGamesRankingData() {
   .sort((a, b) => b.value - a.value);
 }
 
+function getActiveDateRangeForRunner(memberName) {
+  const dates = [];
+
+  allRows.forEach(row => {
+    if (!rowIncludesRunner(row, memberName)) return;
+
+    const date = parseEventDate(row.DATE);
+    if (date instanceof Date && !Number.isNaN(date.getTime())) {
+      dates.push(date);
+    }
+  });
+
+  getRacesForRunner(memberName).forEach(race => {
+    const date = parseEventDate(race.date);
+    if (date instanceof Date && !Number.isNaN(date.getTime())) {
+      dates.push(date);
+    }
+  });
+
+  if (!dates.length) {
+    return null;
+  }
+
+  dates.sort((a, b) => a - b);
+
+  return {
+    firstDate: dates[0],
+    lastDate: dates[dates.length - 1],
+    daysActive: Math.max(1, Math.floor((dates[dates.length - 1] - dates[0]) / 86400000))
+  };
+}
+
+function formatActiveDuration(firstDate, lastDate) {
+  if (!firstDate || !lastDate) return "—";
+
+  let years = lastDate.getFullYear() - firstDate.getFullYear();
+  let months = lastDate.getMonth() - firstDate.getMonth();
+  let days = lastDate.getDate() - firstDate.getDate();
+
+  if (days < 0) {
+    months--;
+
+    const previousMonthLastDay = new Date(
+      lastDate.getFullYear(),
+      lastDate.getMonth(),
+      0
+    ).getDate();
+
+    days += previousMonthLastDay;
+  }
+
+  if (months < 0) {
+    years--;
+    months += 12;
+  }
+
+  if (years === 0 && months === 0 && days === 0) {
+    days = 1;
+  }
+
+  const parts = [];
+
+  if (years > 0) {
+    parts.push(`${years} ${years === 1 ? "year" : "years"}`);
+  }
+
+  if (months > 0) {
+    parts.push(`${months} ${months === 1 ? "month" : "months"}`);
+  }
+
+  if (days > 0 || !parts.length) {
+    parts.push(`${days} ${days === 1 ? "day" : "days"}`);
+  }
+
+  return parts.join(", ");
+}
+
+function buildTimeActiveRankingData() {
+  const members = getUniqueMemberNames();
+
+  return members.map(name => {
+    const range = getActiveDateRangeForRunner(name);
+
+    return {
+      name,
+      value: range ? range.daysActive : null,
+      firstDate: range?.firstDate || null,
+      lastDate: range?.lastDate || null
+    };
+  })
+  .filter(item => item.value !== null)
+  .sort((a, b) => b.value - a.value);
+}
+
 function loadCsv(url) {
   return new Promise((resolve, reject) => {
     Papa.parse(url, {
@@ -1424,20 +1662,26 @@ function renderRankingsView(container, memberName) {
   const runsRanking = buildRunsRankingData();
   const uniqueGamesRanking = buildUniqueGamesRankingData();
   const eventsRanking = buildEventsRankingData();
+  const diversityRanking = buildRunDiversityRankingData();
+  const timeActiveRanking = buildTimeActiveRankingData();
 
   const selectedRuns = runsRanking.find(item => normalizeHandle(item.name) === normalizeHandle(memberName));
   const selectedGames = uniqueGamesRanking.find(item => normalizeHandle(item.name) === normalizeHandle(memberName));
   const selectedEvents = eventsRanking.find(item => normalizeHandle(item.name) === normalizeHandle(memberName));
+  const selectedDiversity = diversityRanking.find(item => normalizeHandle(item.name) === normalizeHandle(memberName));
+  const selectedTimeActive = timeActiveRanking.find(item => normalizeHandle(item.name) === normalizeHandle(memberName));
 
   const runsRankInfo = getTieAwareRank(runsRanking, memberName);
   const gamesRankInfo = getTieAwareRank(uniqueGamesRanking, memberName);
   const eventsRankInfo = getTieAwareRank(eventsRanking, memberName);
+  const diversityRankInfo = getTieAwareRank(diversityRanking, memberName);
+  const timeActiveRankInfo = getTieAwareRank(timeActiveRanking, memberName);
 
   const totalMembers = runsRanking.length;
 
   function rankText(rankInfo) {
     if (!rankInfo) return "—";
-    const base = `${getOrdinal(rankInfo.rank)} most out of ${totalMembers} members`;
+    const base = `${getOrdinal(rankInfo.rank)} out of ${totalMembers} members`;
     return rankInfo.tied ? `Tied for ${base}` : base;
   }
 
@@ -1445,22 +1689,62 @@ function renderRankingsView(container, memberName) {
     <div class="sc-member-rankings-grid">
       <div class="sc-member-ranking-box">
         <div class="sc-member-ranking-label">NUMBER OF RUNS</div>
-        <div class="sc-member-ranking-value">${escapeHtml(String(selectedRuns?.value ?? 0))}</div>
+        <div class="sc-member-ranking-value">
+  ${runsRankInfo ? getMedalCircle(runsRankInfo.rank) : ""}
+  ${escapeHtml(String(selectedRuns?.value ?? 0))}
+</div>
         <div class="sc-member-ranking-sub">${escapeHtml(rankText(runsRankInfo))}</div>
       </div>
 
       <div class="sc-member-ranking-box">
         <div class="sc-member-ranking-label">UNIQUE GAMES</div>
-        <div class="sc-member-ranking-value">${escapeHtml(String(selectedGames?.value ?? 0))}</div>
+        <div class="sc-member-ranking-value">
+  ${gamesRankInfo ? getMedalCircle(gamesRankInfo.rank) : ""}
+  ${escapeHtml(String(selectedGames?.value ?? 0))}
+</div>
         <div class="sc-member-ranking-sub">${escapeHtml(rankText(gamesRankInfo))}</div>
       </div>
 
       <div class="sc-member-ranking-box">
         <div class="sc-member-ranking-label">UNIQUE EVENTS</div>
-        <div class="sc-member-ranking-value">${escapeHtml(String(selectedEvents?.value ?? 0))}</div>
+        <div class="sc-member-ranking-value">
+  ${eventsRankInfo ? getMedalCircle(eventsRankInfo.rank) : ""}
+  ${escapeHtml(String(selectedEvents?.value ?? 0))}
+</div>
         <div class="sc-member-ranking-sub">${escapeHtml(rankText(eventsRankInfo))}</div>
       </div>
-    </div>
+    
+    
+    <div class="sc-member-ranking-box">
+  <div class="sc-member-ranking-label">RUN DIVERSITY</div>
+  <div class="sc-member-ranking-value">
+    ${diversityRankInfo ? getMedalCircle(diversityRankInfo.rank) : ""}
+    ${selectedDiversity
+      ? escapeHtml(Math.round(selectedDiversity.value * 100) + "%")
+      : "—"}
+  </div>
+  <div class="sc-member-ranking-sub">
+    ${
+      diversityRankInfo
+        ? `${diversityRankInfo.tied ? "Tied for " : ""}${escapeHtml(getOrdinal(diversityRankInfo.rank))} most diverse out of ${totalMembers} members`
+        : "Minimum 2 events required"
+    }
+  </div>
+</div>
+    
+          <div class="sc-member-stat sc-member-stat-full">
+  <div class="sc-member-ranking-label">TIME ACTIVE</div>
+  <div class="sc-member-ranking-value">
+    ${timeActiveRankInfo ? getMedalCircle(timeActiveRankInfo.rank) : ""}
+    ${selectedTimeActive
+      ? escapeHtml(formatActiveDuration(selectedTimeActive.firstDate, selectedTimeActive.lastDate))
+      : "—"}
+  </div>
+  <div class="sc-member-ranking-sub">
+    ${timeActiveRankInfo ? `${timeActiveRankInfo.tied ? "Tied for " : ""}${escapeHtml(getOrdinal(timeActiveRankInfo.rank))} longest out of ${totalMembers} members` : "—"}
+  </div>
+</div>
+    
   `;
 }
 
@@ -1477,9 +1761,14 @@ function setupMemberVisuals(visualCard, memberName) {
   }
 
   function openMenu() {
-    dropdown.classList.add("open");
-    trigger.setAttribute("aria-expanded", "true");
-  }
+  dropdown.classList.add("open");
+  trigger.setAttribute("aria-expanded", "true");
+
+  requestAnimationFrame(() => {
+    scrollSelectedMemberIntoView();
+  });
+}
+  
 
   function showChart() {
     canvas.style.display = "block";
@@ -1501,6 +1790,7 @@ function setupMemberVisuals(visualCard, memberName) {
       openMenu();
     }
   });
+  
 
   document.addEventListener("click", (e) => {
     if (!dropdown.contains(e.target)) {
@@ -1889,7 +2179,7 @@ async function renderMemberSummary(memberName) {
   </p>
   <p class="sc-member-ranking-sub">
     ${playtimeStats.totalSeconds > 0
-  ? `${playtimeStats.percentOfAll.toFixed(1)}% of total Sega Crew playtime (${playtimeStats.rank ? `${escapeHtml(getOrdinal(playtimeStats.rank))} most out of ${escapeHtml(String(playtimeStats.totalRunners))}` : "unranked"})`
+  ? `${playtimeStats.percentOfAll.toFixed(1)}% of total Sega Crew playtime (${playtimeStats.rank ? `${escapeHtml(getOrdinal(playtimeStats.rank))} out of ${escapeHtml(String(playtimeStats.totalRunners))}` : "unranked"})`
   : "No VOD playtime available"}
   </p>
 </div>
@@ -1951,6 +2241,8 @@ function renderMemberRunsTable(memberName) {
       VIDEOURL2: "",
       TIMESTAMP: "",
       TIMESTAMP2: "",
+      _isRaceDerived: true,
+      _race: race,
       RUNNER1: race.runners[0]?.name || "",
       RUNNER2: race.runners[1]?.name || "",
       RUNNER3: race.runners[2]?.name || "",
@@ -2123,6 +2415,36 @@ function renderMemberCommentaryTable(memberName) {
   content.appendChild(wrap);
 }
 
+window.debugRacePlacementsForRunner = function(memberName) {
+  const target = normalizeHandle(memberName);
+
+  const races = raceData.filter(race =>
+    race.runners.some(r => normalizeHandle(r.name) === target)
+  );
+
+  console.log("Race count:", races.length);
+
+  races.forEach(race => {
+    if (EXCLUDED_RACE_KEYS.has(race.key)) return;
+
+    const placements = getRacePlacements(race);
+    const result = placements.find(p => normalizeHandle(p.name) === target);
+
+    console.log({
+      event: race.eventName,
+      key: race.key,
+      runnerFound: !!result,
+      runnerPlace: result?.place,
+      runnerTime: result?.time,
+      runnerSeconds: result?.seconds,
+      fieldSize: result?.fieldSize,
+      rawRunners: race.runners,
+      placements
+    });
+  });
+};
+
+
   function setSelected(name) {
     trigger.textContent = name || "Select a member";
     trigger.dataset.value = name || "";
@@ -2130,36 +2452,6 @@ function renderMemberCommentaryTable(memberName) {
     renderMember(name);
   }
   
-  window.debugRacePlacementsForRunner = function(memberName) {
-  getRacesForRunner(memberName).forEach(race => {
-    if (EXCLUDED_RACE_KEYS.has(race.key)) return;
-
-    const placements = getRacePlacements(race);
-    const result = placements.find(
-      p => normalizeHandle(p.name) === normalizeHandle(memberName)
-    );
-
-    if (!result) return;
-
-    console.log({
-      event: race.eventName,
-      key: race.key,
-      runner: result.name,
-      place: result.place,
-      fieldSize: result.fieldSize,
-      time: result.time,
-      seconds: result.seconds,
-      allPlacements: placements.map(p => ({
-        place: p.place,
-        name: p.name,
-        time: p.time,
-        seconds: p.seconds,
-        isDNF: p.isDNF
-      }))
-    });
-  });
-};
-
   function handleMembersLoaded() {
     const uniqueMembers = getUniqueMemberNames();
 
@@ -2184,9 +2476,10 @@ function renderMemberCommentaryTable(memberName) {
       item.type = "button";
       item.className = "sc-dropdown-item";
       item.textContent = name;
-      item.title = name;
-      item.addEventListener("click", () => setSelected(name));
-      menu.appendChild(item);
+item.title = name;
+item.dataset.value = name;
+item.addEventListener("click", () => setSelected(name));
+menu.appendChild(item);
     });
   }
 
@@ -2198,6 +2491,21 @@ function renderMemberCommentaryTable(memberName) {
       openMenu();
     }
   });
+  
+  document.addEventListener("keydown", (e) => {
+  if (!dropdown.classList.contains("open")) return;
+
+  if (e.key.length !== 1 || e.ctrlKey || e.metaKey || e.altKey) return;
+
+  memberTypeSearch += e.key.toLowerCase();
+
+  clearTimeout(memberTypeSearchTimer);
+  memberTypeSearchTimer = setTimeout(() => {
+    memberTypeSearch = "";
+  }, 900);
+
+  scrollMemberMatchIntoView(memberTypeSearch);
+});
 
   document.addEventListener("click", (e) => {
     if (!dropdown.contains(e.target)) {
