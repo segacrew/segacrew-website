@@ -93,7 +93,7 @@ const mobileMemberList = mobileMemberPicker.querySelector(".sc-mobile-member-lis
 const mobileMemberClose = mobileMemberPicker.querySelector(".sc-mobile-member-close");
 
 function isMobileMemberPickerMode() {
-  return window.innerWidth <= 768;
+  return window.matchMedia("(max-width: 900px), (pointer: coarse)").matches;
 }
 
 function closeMobileMemberPicker() {
