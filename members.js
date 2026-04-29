@@ -75,58 +75,6 @@ const EXTRA_CSV_URL = IS_LOCAL
   wrapper.appendChild(dropdown);
   controls.appendChild(wrapper);
 
-const mobileMemberPicker = document.createElement("div");
-mobileMemberPicker.className = "sc-mobile-member-picker";
-mobileMemberPicker.innerHTML = `
-  <div class="sc-mobile-member-panel">
-    <div class="sc-mobile-member-header">
-      <span>Select a member</span>
-      <button type="button" class="sc-mobile-member-close" aria-label="Close"></button>
-    </div>
-    <div class="sc-mobile-member-list"></div>
-  </div>
-`;
-
-document.body.appendChild(mobileMemberPicker);
-
-const mobileMemberList = mobileMemberPicker.querySelector(".sc-mobile-member-list");
-const mobileMemberClose = mobileMemberPicker.querySelector(".sc-mobile-member-close");
-
-function isMobileMemberPickerMode() {
-  return window.innerWidth <= 768;
-}
-
-function closeMobileMemberPicker() {
-  mobileMemberPicker.classList.remove("open");
-  document.body.style.overflow = "";
-}
-
-function openMobileMemberPicker() {
-  mobileMemberList.innerHTML = "";
-
-  [...menu.querySelectorAll(".sc-dropdown-item")].forEach(sourceItem => {
-    const item = sourceItem.cloneNode(true);
-
-    item.addEventListener("click", () => {
-      sourceItem.click();
-      closeMobileMemberPicker();
-    });
-
-    mobileMemberList.appendChild(item);
-  });
-
-  mobileMemberPicker.classList.add("open");
-  document.body.style.overflow = "hidden";
-}
-
-mobileMemberClose.addEventListener("click", closeMobileMemberPicker);
-
-mobileMemberPicker.addEventListener("click", e => {
-  if (e.target === mobileMemberPicker) {
-    closeMobileMemberPicker();
-  }
-});
-    
   
 const modal = document.createElement("div");
 modal.className = "sc-modal";
@@ -2538,13 +2486,6 @@ menu.appendChild(item);
 
   trigger.addEventListener("click", (e) => {
   e.stopPropagation();
-
-  if (isMobileMemberPickerMode()) {
-    closeMenu();
-    openMobileMemberPicker();
-    return;
-  }
-
   if (dropdown.classList.contains("open")) {
     closeMenu();
   } else {

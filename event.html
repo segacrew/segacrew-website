@@ -5,19 +5,6 @@ document.addEventListener("DOMContentLoaded", () => {
   let allRows = [];
   let currentEventRows = [];
   let currentRunIndex = -1;
-  
-  const IS_LOCAL =
-  window.location.hostname === "127.0.0.1" ||
-  window.location.hostname === "localhost";
-
-  const CSV_URL = IS_LOCAL
-  ? "sega crew database - master sheet.csv"
-  : "https://stupendous-paletas-199024.netlify.app/sega crew database - master sheet.csv";
-  
-  const EXCLUDED_EVENT_KEYS = new Set([
-    // "PUT_KEY_HERE",
-    // "PUT_ANOTHER_KEY_HERE"
-  ]);
 
   const wrapper = document.createElement("div");
   wrapper.className = "sc-page-controls";
@@ -40,9 +27,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const menu = document.createElement("div");
   menu.className = "sc-dropdown-menu";
   menu.setAttribute("role", "listbox");
-  
-  let eventTypeSearch = "";
-  let eventTypeSearchTimer = null;
 
   const resultsWrap = document.createElement("div");
   resultsWrap.className = "sc-results-wrap";
@@ -50,7 +34,7 @@ document.addEventListener("DOMContentLoaded", () => {
   
   const eventImageMap = {
   "1": "images/segathonlogo1.png",
-  "2": "images/segaweek.png",
+  "2": "images/segaweeklogo_orig.png",
   "3": "images/segamini-logo.png",
   "4": "images/nightmareonsegastreet.png",
   "5": "images/segathon2-new.png",
@@ -64,7 +48,7 @@ document.addEventListener("DOMContentLoaded", () => {
   "13": "images/ed-a-thon.png",
   "14": "images/segathon4logo.png",
   "15": "images/SegaWeen_Draft_2.png",
-  "16": "images/rpg-a-thon.png",
+  "16": "images/rpg-a-thon-logo.png",
   "17": "images/LICENSEDATHON.png",
   "18": "images/april-fools.png",
   "19": "images/ed-a-thon-2023.png",
@@ -72,14 +56,7 @@ document.addEventListener("DOMContentLoaded", () => {
   "21": "images/stvlogo.png",
   "22": "images/4040Logo1.png",
   "23": "images/segaween-part-5.png",
-  "24": "images/segathonvi.png",
-  "25": "images/DreamcastAnniversary.png",
-  "26": "images/segalympics_logo_2024.png",
-  "27": "images/segathon7.png",
-  "28": "images/saturnalia_logo_1.png",
-  "29": "images/MKIII.png",
-  "30": "images/SW6logo.png",
-  "31": "images/segalympics_2026_logo.png",
+  "24": "images/segathonvi.png"
 };
   
 
@@ -140,40 +117,9 @@ nextBtn.addEventListener("click", () => {
   }
 
   function openMenu() {
-  dropdown.classList.add("open");
-  trigger.setAttribute("aria-expanded", "true");
-
-  requestAnimationFrame(() => {
-    scrollSelectedEventIntoView();
-  });
-}
-
-function scrollSelectedEventIntoView() {
-  const selectedName = normalizeName(trigger.dataset.value);
-  if (!selectedName) return;
-
-  const selectedItem = [...menu.querySelectorAll(".sc-dropdown-item")].find(
-    item => normalizeName(item.dataset.value || item.textContent) === selectedName
-  );
-
-  if (selectedItem) {
-    selectedItem.scrollIntoView({ block: "center" });
+    dropdown.classList.add("open");
+    trigger.setAttribute("aria-expanded", "true");
   }
-}
-
-function scrollEventMatchIntoView(query) {
-  const cleanQuery = normalizeName(query).toLowerCase();
-  if (!cleanQuery) return;
-
-  const match = [...menu.querySelectorAll(".sc-dropdown-item")].find(item => {
-    const value = normalizeName(item.dataset.value || item.textContent).toLowerCase();
-    return value.startsWith(cleanQuery);
-  });
-
-  if (match) {
-    match.scrollIntoView({ block: "center" });
-  }
-}
 
   function clearResults(message = "") {
     resultsWrap.innerHTML = "";
@@ -249,14 +195,6 @@ function buildTwitchLinksHtml(names) {
       .replaceAll(">", "&gt;")
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#39;");
-  }
-  
-    function normalizeName(value) {
-    return String(value || "").trim();
-  }
-
-  function isExcludedEventRow(row) {
-    return EXCLUDED_EVENT_KEYS.has(normalizeName(row.KEY));
   }
 
 function parseTimestampToSeconds(timestamp) {
@@ -385,6 +323,7 @@ function buildRaceResultsData(row, timePrefix) {
 
   if (!results.length) return [];
 
+  // Sort: valid times first, then DNFs at bottom
   results.sort((a, b) => {
     if (a.isDNF && b.isDNF) return 0;
     if (a.isDNF) return 1;
@@ -392,6 +331,7 @@ function buildRaceResultsData(row, timePrefix) {
     return a.seconds - b.seconds;
   });
 
+  // Find fastest valid time
   const fastestEntry = results.find(r => !r.isDNF);
   const fastest = fastestEntry ? fastestEntry.seconds : null;
 
@@ -441,11 +381,6 @@ function createRaceTable(title, data) {
   wrap.appendChild(table);
 
   return wrap;
-}
-
-function getEventHoraroUrl(rows) {
-  const firstRow = rows.find(row => normalizeName(row.HORARO));
-  return firstRow ? normalizeName(firstRow.HORARO) : "";
 }
 
 function openRunModal(row) {
@@ -593,26 +528,6 @@ if (!embedUrl && !embedUrl2) {
   resultsWrap.appendChild(imageWrap);
 }
 
-function renderHoraroLink(horaroUrl) {
-  const existing = document.getElementById("scEventHoraro");
-  if (existing) existing.remove();
-
-  if (!horaroUrl) return;
-
-  const wrap = document.createElement("p");
-  wrap.className = "sc-event-horaro";
-  wrap.id = "scEventHoraro";
-
-  const link = document.createElement("a");
-  link.href = horaroUrl;
-  link.target = "_blank";
-  link.rel = "noopener noreferrer";
-  link.textContent = "Official Schedule";
-
-  wrap.appendChild(link);
-  resultsWrap.appendChild(wrap);
-}
-
   function buildResultsTable(rowsForEventId, eventName) {
 
     if (!rowsForEventId.length) {
@@ -635,7 +550,7 @@ function renderHoraroLink(horaroUrl) {
       <tr>
         <th>GAME</th>
         <th>RUN TYPE</th>
-        <th>CATEGORY</th>
+        <th>SPEEDRUN CATEGORY</th>
         <th>CONSOLE</th>
         <th>RUNNER(S)</th>
       </tr>
@@ -714,17 +629,14 @@ function renderHoraroLink(horaroUrl) {
     }
 
     const rowsForEventId = allRows.filter(
-      row => String(row.EVENTID || "").trim() === eventId
-    );
+  row => String(row.EVENTID || "").trim() === eventId
+);
 
-    const horaroUrl = getEventHoraroUrl(rowsForEventId);
+currentEventRows = rowsForEventId;
 
-    currentEventRows = rowsForEventId;
-
-    resultsWrap.innerHTML = "";
-    renderEventImage(eventId);
-    renderHoraroLink(horaroUrl);
-    buildResultsTable(rowsForEventId, eventName);
+resultsWrap.innerHTML = "";
+renderEventImage(eventId);
+buildResultsTable(rowsForEventId, eventName);
   }
 
   trigger.addEventListener("click", (e) => {
@@ -741,28 +653,13 @@ function renderHoraroLink(horaroUrl) {
       closeMenu();
     }
   });
-  
-  document.addEventListener("keydown", (e) => {
-  if (!dropdown.classList.contains("open")) return;
-  if (e.key === "Escape") return;
-  if (e.key.length !== 1 || e.ctrlKey || e.metaKey || e.altKey) return;
 
-  eventTypeSearch += e.key.toLowerCase();
-
-  clearTimeout(eventTypeSearchTimer);
-  eventTypeSearchTimer = setTimeout(() => {
-    eventTypeSearch = "";
-  }, 900);
-
-  scrollEventMatchIntoView(eventTypeSearch);
-});
-
-  Papa.parse(CSV_URL, {
+  Papa.parse("https://stupendous-paletas-199024.netlify.app/sega crew database - master sheet.csv", {
     download: true,
     header: true,
     skipEmptyLines: true,
-        complete: function(results) {
-      allRows = (results.data || []).filter(row => !isExcludedEventRow(row));
+    complete: function(results) {
+      allRows = results.data || [];
 
       const uniqueEvents = [...new Set(
         allRows
@@ -779,23 +676,21 @@ function renderHoraroLink(horaroUrl) {
       }
 
       const defaultItem = document.createElement("button");
-defaultItem.type = "button";
-defaultItem.className = "sc-dropdown-item";
-defaultItem.textContent = "Select an event";
-defaultItem.dataset.value = "Select an event";
-defaultItem.addEventListener("click", () => setSelected(""));
-menu.appendChild(defaultItem);
+      defaultItem.type = "button";
+      defaultItem.className = "sc-dropdown-item";
+      defaultItem.textContent = "Select an event";
+      defaultItem.addEventListener("click", () => setSelected(""));
+      menu.appendChild(defaultItem);
 
       uniqueEvents.forEach(eventName => {
-  const item = document.createElement("button");
-  item.type = "button";
-  item.className = "sc-dropdown-item";
-  item.textContent = eventName;
-  item.title = eventName;
-  item.dataset.value = eventName;
-  item.addEventListener("click", () => setSelected(eventName));
-  menu.appendChild(item);
-});
+        const item = document.createElement("button");
+        item.type = "button";
+        item.className = "sc-dropdown-item";
+        item.textContent = eventName;
+        item.title = eventName;
+        item.addEventListener("click", () => setSelected(eventName));
+        menu.appendChild(item);
+      });
     },
     error: function(err) {
       console.error("Papa Parse load error:", err);

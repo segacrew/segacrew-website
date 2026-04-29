@@ -94,17 +94,7 @@ document.addEventListener("DOMContentLoaded", () => {
   consoleMenu.className = "sc-dropdown-menu";
   consoleMenu.setAttribute("role", "listbox");
 
-  const consoleSearchInput = document.createElement("input");
-  consoleSearchInput.type = "text";
-  consoleSearchInput.className = "sc-dropdown-search";
-  consoleSearchInput.placeholder = "Search consoles...";
-  consoleSearchInput.autocomplete = "off";
-
-  const consoleItemsWrap = document.createElement("div");
-  consoleItemsWrap.className = "sc-dropdown-items";
-
-  consoleMenu.appendChild(consoleSearchInput);
-  consoleMenu.appendChild(consoleItemsWrap);
+  const consoleItemsWrap = consoleMenu;
   consoleDropdown.appendChild(consoleTrigger);
   consoleDropdown.appendChild(consoleMenu);
 
@@ -127,17 +117,8 @@ document.addEventListener("DOMContentLoaded", () => {
   menu.className = "sc-dropdown-menu";
   menu.setAttribute("role", "listbox");
 
-  const gameSearchInput = document.createElement("input");
-  gameSearchInput.type = "text";
-  gameSearchInput.className = "sc-dropdown-search";
-  gameSearchInput.placeholder = "Search games...";
-  gameSearchInput.autocomplete = "off";
+  const gameItemsWrap = menu;
 
-  const gameItemsWrap = document.createElement("div");
-  gameItemsWrap.className = "sc-dropdown-items";
-
-  menu.appendChild(gameSearchInput);
-  menu.appendChild(gameItemsWrap);
   dropdown.appendChild(trigger);
   dropdown.appendChild(menu);
 
@@ -169,84 +150,6 @@ modal.innerHTML = `
 
 document.body.appendChild(modal);
 
-  const mobilePicker = document.createElement("div");
-  mobilePicker.className = "sc-mobile-picker";
-  mobilePicker.innerHTML = `
-    <div class="sc-mobile-picker-panel">
-      <div class="sc-mobile-picker-header">
-        <div class="sc-mobile-picker-title"></div>
-        <button type="button" class="sc-mobile-picker-close">Close</button>
-      </div>
-      <div class="sc-mobile-picker-body"></div>
-    </div>
-  `;
-  document.body.appendChild(mobilePicker);
-
-  const mobilePickerTitle = mobilePicker.querySelector(".sc-mobile-picker-title");
-  const mobilePickerBody = mobilePicker.querySelector(".sc-mobile-picker-body");
-  const mobilePickerClose = mobilePicker.querySelector(".sc-mobile-picker-close");
-
-  function isMobilePickerMode() {
-    return window.innerWidth <= 900;
-  }
-
-  function closeMobilePicker() {
-    mobilePicker.classList.remove("open");
-    mobilePickerTitle.textContent = "";
-    mobilePickerBody.innerHTML = "";
-    document.body.style.overflow = "";
-  }
-
-  function openMobilePicker(title, type) {
-    mobilePickerTitle.textContent = title;
-    mobilePickerBody.innerHTML = "";
-
-    const search = document.createElement("input");
-    search.type = "text";
-    search.className = "sc-dropdown-search";
-    search.placeholder = type === "console" ? "Search consoles..." : "Search games...";
-    search.autocomplete = "off";
-
-    const itemsWrap = document.createElement("div");
-    itemsWrap.className = "sc-dropdown-items";
-
-    const sourceItems = type === "console"
-      ? [...consoleItemsWrap.querySelectorAll(".sc-dropdown-item")]
-      : [...gameItemsWrap.querySelectorAll(".sc-dropdown-item")];
-
-    sourceItems.forEach(sourceItem => {
-      const clone = sourceItem.cloneNode(true);
-      clone.addEventListener("click", () => {
-        sourceItem.click();
-        closeMobilePicker();
-      });
-      itemsWrap.appendChild(clone);
-    });
-
-    search.addEventListener("input", () => {
-      const query = search.value.trim().toLowerCase();
-      itemsWrap.querySelectorAll(".sc-dropdown-item").forEach(item => {
-        const text = item.textContent.trim().toLowerCase();
-        item.style.display = text.includes(query) ? "" : "none";
-      });
-    });
-
-    mobilePickerBody.appendChild(search);
-    mobilePickerBody.appendChild(itemsWrap);
-
-    mobilePicker.classList.add("open");
-    document.body.style.overflow = "hidden";
-    search.focus();
-  }
-
-  mobilePickerClose.addEventListener("click", closeMobilePicker);
-
-  mobilePicker.addEventListener("click", (e) => {
-    if (e.target === mobilePicker) {
-      closeMobilePicker();
-    }
-  });
-
 const modalTitle = modal.querySelector("#scModalTitle");
 const modalSubtitle = modal.querySelector("#scModalSubtitle");
 const modalBody = modal.querySelector("#scModalBody");
@@ -260,12 +163,14 @@ const nextBtn = modal.querySelector(".sc-modal-next");
   }
 
   function openGameMenu() {
-    closeConsoleMenu();
-    dropdown.classList.add("open");
-    trigger.setAttribute("aria-expanded", "true");
-    gameSearchInput.value = "";
-    filterDropdownItems(gameSearchInput, gameItemsWrap);
-  }
+  closeConsoleMenu();
+  dropdown.classList.add("open");
+  trigger.setAttribute("aria-expanded", "true");
+
+  requestAnimationFrame(() => {
+    scrollSelectedGameIntoView();
+  });
+}
 
   function closeConsoleMenu() {
     consoleDropdown.classList.remove("open");
@@ -273,12 +178,14 @@ const nextBtn = modal.querySelector(".sc-modal-next");
   }
 
   function openConsoleMenu() {
-    closeGameMenu();
-    consoleDropdown.classList.add("open");
-    consoleTrigger.setAttribute("aria-expanded", "true");
-    consoleSearchInput.value = "";
-    filterDropdownItems(consoleSearchInput, consoleItemsWrap);
-  }
+  closeGameMenu();
+  consoleDropdown.classList.add("open");
+  consoleTrigger.setAttribute("aria-expanded", "true");
+
+  requestAnimationFrame(() => {
+    scrollSelectedConsoleIntoView();
+  });
+}
 
   function closeMenu() {
     closeGameMenu();
@@ -459,14 +366,6 @@ function getRaceDerivedRowsForGame(selectedOption) {
       .replaceAll("'", "&#39;");
   }
   
-  function filterDropdownItems(inputEl, itemsWrap) {
-  const query = inputEl.value.trim().toLowerCase();
-
-  itemsWrap.querySelectorAll(".sc-dropdown-item").forEach(item => {
-    const text = item.textContent.trim().toLowerCase();
-    item.style.display = text.includes(query) ? "" : "none";
-  });
-}
   
   function getNamesFromColumns(row, prefix, maxCount) {
   const names = [];
@@ -659,6 +558,51 @@ function inferConsoleForRaceGame(gameName, race) {
   return "";
 }
 
+let gameTypeSearch = "";
+let gameTypeSearchTimer = null;
+let consoleTypeSearch = "";
+let consoleTypeSearchTimer = null;
+
+function scrollSelectedGameIntoView() {
+  const selectedValue = normalizeName(trigger.dataset.value);
+  if (!selectedValue) return;
+
+  const selectedItem = [...gameItemsWrap.querySelectorAll(".sc-dropdown-item")].find(
+    item => normalizeName(item.dataset.value || item.textContent) === selectedValue
+  );
+
+  if (selectedItem) {
+    selectedItem.scrollIntoView({ block: "center" });
+  }
+}
+
+function scrollSelectedConsoleIntoView() {
+  const selectedValue = normalizeName(consoleTrigger.dataset.value || consoleTrigger.textContent);
+  if (!selectedValue) return;
+
+  const selectedItem = [...consoleItemsWrap.querySelectorAll(".sc-dropdown-item")].find(
+    item => normalizeName(item.dataset.value || item.textContent) === selectedValue
+  );
+
+  if (selectedItem) {
+    selectedItem.scrollIntoView({ block: "center" });
+  }
+}
+
+function scrollDropdownMatchIntoView(itemsWrap, query) {
+  const cleanQuery = normalizeName(query).toLowerCase();
+  if (!cleanQuery) return;
+
+  const match = [...itemsWrap.querySelectorAll(".sc-dropdown-item")].find(item => {
+    const value = normalizeName(item.dataset.value || item.textContent).toLowerCase();
+    return value.startsWith(cleanQuery);
+  });
+
+  if (match) {
+    match.scrollIntoView({ block: "center" });
+  }
+}
+
 function populateGameDropdown() {
   currentGameOptions = getGameDropdownOptions(allRows, selectedConsoleFilter);
 
@@ -671,23 +615,31 @@ function populateGameDropdown() {
   }
 
   const defaultItem = document.createElement("button");
-  defaultItem.type = "button";
-  defaultItem.className = "sc-dropdown-item";
-  defaultItem.textContent = "Select A Game";
-  defaultItem.addEventListener("click", () => setSelected(null));
-  gameItemsWrap.appendChild(defaultItem);
+defaultItem.type = "button";
+defaultItem.className = "sc-dropdown-item";
+defaultItem.textContent = "Select A Game";
+defaultItem.dataset.value = "Select A Game";
+
+defaultItem.addEventListener("click", () => {
+  trigger.dataset.value = "Select A Game";  
+  setSelected(null);
+});
 
   currentGameOptions.forEach(option => {
-    const item = document.createElement("button");
-    item.type = "button";
-    item.className = "sc-dropdown-item";
-    item.textContent = option.label;
-    item.title = option.label;
-    item.addEventListener("click", () => setSelected(option));
-    gameItemsWrap.appendChild(item);
+  const item = document.createElement("button");
+  item.type = "button";
+  item.className = "sc-dropdown-item";
+  item.textContent = option.label;
+  item.title = option.label;
+  item.dataset.value = option.label;
+
+  item.addEventListener("click", () => {
+    trigger.dataset.value = option.label; 
+    setSelected(option);
   });
 
-  filterDropdownItems(gameSearchInput, gameItemsWrap);
+  gameItemsWrap.appendChild(item);
+});
 }
 
 function populateConsoleDropdown() {
@@ -696,35 +648,42 @@ function populateConsoleDropdown() {
   consoleItemsWrap.innerHTML = "";
 
   const allItem = document.createElement("button");
-  allItem.type = "button";
-  allItem.className = "sc-dropdown-item";
-  allItem.textContent = "All Consoles";
-  allItem.addEventListener("click", () => {
-    selectedConsoleFilter = "";
-    consoleTrigger.textContent = "All Consoles";
+allItem.type = "button";
+allItem.className = "sc-dropdown-item";
+allItem.textContent = "All Consoles";
+allItem.dataset.value = "All Consoles";
+
+allItem.addEventListener("click", () => {
+  selectedConsoleFilter = "";
+  consoleTrigger.textContent = "All Consoles";
+  consoleTrigger.dataset.value = "All Consoles"; 
+
+  closeConsoleMenu();
+  setSelected(null);
+  populateGameDropdown();
+});
+  consoleItemsWrap.appendChild(allItem);
+
+  consoles.forEach(consoleName => {
+  const item = document.createElement("button");
+  item.type = "button";
+  item.className = "sc-dropdown-item";
+  item.textContent = consoleName;
+  item.title = consoleName;
+  item.dataset.value = consoleName;
+
+  item.addEventListener("click", () => {
+    selectedConsoleFilter = consoleName;
+    consoleTrigger.textContent = consoleName;
+    consoleTrigger.dataset.value = consoleName; 
+
     closeConsoleMenu();
     setSelected(null);
     populateGameDropdown();
   });
-  consoleItemsWrap.appendChild(allItem);
 
-  consoles.forEach(consoleName => {
-    const item = document.createElement("button");
-    item.type = "button";
-    item.className = "sc-dropdown-item";
-    item.textContent = consoleName;
-    item.title = consoleName;
-    item.addEventListener("click", () => {
-      selectedConsoleFilter = consoleName;
-      consoleTrigger.textContent = consoleName;
-      closeConsoleMenu();
-      setSelected(null);
-      populateGameDropdown();
-    });
-    consoleItemsWrap.appendChild(item);
-  });
-
-  filterDropdownItems(consoleSearchInput, consoleItemsWrap);
+  consoleItemsWrap.appendChild(item);
+});
 }
 
 function formatDifferenceFromLeader(diffSeconds) {
@@ -1286,50 +1245,56 @@ function buildGameSummary(gameRows) {
   }
 
   trigger.addEventListener("click", (e) => {
-    e.stopPropagation();
+  e.stopPropagation();
 
-    if (isMobilePickerMode()) {
-      closeConsoleMenu();
-      openMobilePicker("Select Game", "game");
-      return;
-    }
-
-    if (dropdown.classList.contains("open")) {
-      closeGameMenu();
-    } else {
-      openGameMenu();
-      gameSearchInput.focus();
-    }
-  });
+  if (dropdown.classList.contains("open")) {
+    closeGameMenu();
+  } else {
+    openGameMenu();
+  }
+});
 
   consoleTrigger.addEventListener("click", (e) => {
-    e.stopPropagation();
+  e.stopPropagation();
 
-    if (isMobilePickerMode()) {
-      closeGameMenu();
-      openMobilePicker("Filter by Console", "console");
-      return;
-    }
-
-    if (consoleDropdown.classList.contains("open")) {
-      closeConsoleMenu();
-    } else {
-      openConsoleMenu();
-      consoleSearchInput.focus();
-    }
-  });
+  if (consoleDropdown.classList.contains("open")) {
+    closeConsoleMenu();
+  } else {
+    openConsoleMenu();
+  }
+});
 
   document.addEventListener("click", (e) => {
     if (!dropdown.contains(e.target)) closeGameMenu();
     if (!consoleDropdown.contains(e.target)) closeConsoleMenu();
   });
+  
+  document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") return;
+  if (e.key.length !== 1 || e.ctrlKey || e.metaKey || e.altKey) return;
 
-consoleSearchInput.addEventListener("input", () => {
-  filterDropdownItems(consoleSearchInput, consoleItemsWrap);
-});
+  if (dropdown.classList.contains("open")) {
+    gameTypeSearch += e.key.toLowerCase();
 
-gameSearchInput.addEventListener("input", () => {
-  filterDropdownItems(gameSearchInput, gameItemsWrap);
+    clearTimeout(gameTypeSearchTimer);
+    gameTypeSearchTimer = setTimeout(() => {
+      gameTypeSearch = "";
+    }, 900);
+
+    scrollDropdownMatchIntoView(gameItemsWrap, gameTypeSearch);
+    return;
+  }
+
+  if (consoleDropdown.classList.contains("open")) {
+    consoleTypeSearch += e.key.toLowerCase();
+
+    clearTimeout(consoleTypeSearchTimer);
+    consoleTypeSearchTimer = setTimeout(() => {
+      consoleTypeSearch = "";
+    }, 900);
+
+    scrollDropdownMatchIntoView(consoleItemsWrap, consoleTypeSearch);
+  }
 });
 
   Promise.all([
