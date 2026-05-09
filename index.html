@@ -385,7 +385,7 @@
 <header class="sc-header">
   <div class="sc-header-inner">
     <a href="/" class="sc-brand">
-      <img class="sc-logo" src="images/segacrew_logo.png" alt="Sega Crew logo">
+      <img class="sc-logo" src="images/segacrew_logo.png" alt="">
       <div class="sc-title-wrap">
         <h1 class="sc-site-title">Sega Crew</h1>
         <p class="sc-site-tag">Events • Archive • Community</p>
@@ -402,10 +402,28 @@
   </div>
 </header>
 
-<section class="sc-hero">
+  <section class="sc-hero">
+  <script>
+    const DEFAULT_BANNER = "bannervid_zoom.mov";
+    const ALT_BANNER = "bannermov2.mov";
+
+    const today = new Date();
+    const isAprilFools =
+      today.getMonth() === 3 &&
+      today.getDate() === 1;
+
+    const selectedBanner =
+      isAprilFools || Math.random() < 0.03
+        ? ALT_BANNER
+        : DEFAULT_BANNER;
+  </script>
+
   <video class="sc-hero-video" autoplay muted loop playsinline>
-    <source src="bannervid_zoom.mov" type="video/mp4">
+    <script>
+      document.write(`<source src="${selectedBanner}" type="video/mp4">`);
+    </script>
   </video>
+
   <div class="sc-hero-overlay">
     <div class="sc-hero-content">
       <h2>Welcome to the Sega Crew</h2>
