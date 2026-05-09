@@ -2366,14 +2366,12 @@ function renderStatsPanel() {
 
   const consoleStatsCard = buildConsoleStatsCard();
 
-  card.appendChild(title);
   card.appendChild(statsGrid);
   card.appendChild(consoleStatsCard);
 
   }  else {
   title.textContent = "Sega Crew Stats";
 
-  card.appendChild(title);
   card.appendChild(buildSegaCrewTwitchStatsPanel());
 }
 
