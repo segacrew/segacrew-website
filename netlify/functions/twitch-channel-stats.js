@@ -28,7 +28,7 @@ exports.handler = async function () {
 
     const broadcasterId = user.id;
 
-    const [channelData, streamData, followersData, videosData] = await Promise.all([
+    const [channelData, streamData, followersData, clipsData] = await Promise.all([
       twitchGet(
         `https://api.twitch.tv/helix/channels?broadcaster_id=${encodeURIComponent(broadcasterId)}`,
         clientId,
@@ -45,15 +45,15 @@ exports.handler = async function () {
         token
       ),
       twitchGet(
-        `https://api.twitch.tv/helix/videos?user_id=${encodeURIComponent(broadcasterId)}&first=10&type=archive`,
-        clientId,
-        token
-      )
+  `https://api.twitch.tv/helix/clips?broadcaster_id=${encodeURIComponent(broadcasterId)}&first=20`,
+  clientId,
+  token
+)
     ]);
 
     const channel = channelData.data?.[0] || null;
     const stream = streamData.data?.[0] || null;
-    const videos = videosData.data || [];
+    const clips = clipsData.data || [];
 
     return jsonResponse(200, {
       channel: {
@@ -83,15 +83,21 @@ exports.handler = async function () {
         : {
             isLive: false
           },
-      recentVideos: videos.map(video => ({
-        id: video.id,
-        title: video.title,
-        publishedAt: video.published_at,
-        url: video.url,
-        viewCount: video.view_count,
-        duration: video.duration,
-        type: video.type
-      }))
+      recentClips: clips.map(clip => ({
+  id: clip.id,
+  title: clip.title,
+  createdAt: clip.created_at,
+  url: clip.url,
+  embedUrl: clip.embed_url,
+  broadcasterName: clip.broadcaster_name,
+  creatorName: clip.creator_name,
+  videoId: clip.video_id,
+  gameId: clip.game_id,
+  language: clip.language,
+  viewCount: clip.view_count,
+  duration: clip.duration,
+  thumbnailUrl: clip.thumbnail_url
+}))
     });
   } catch (err) {
     console.error("twitch-channel-stats error:", err);
