@@ -212,14 +212,6 @@ async function preloadAllVideoDurations() {
     if (id2) ids.add(id2);
   });
 
-  freeForAllRows.forEach(row => {
-    const id1 = extractYouTubeId(row.VIDEOURL);
-    const id2 = extractYouTubeId(row.VIDEOURL2);
-
-    if (id1) ids.add(id1);
-    if (id2) ids.add(id2);
-  });
-
   raceData.forEach(race => {
     const raceId = extractYouTubeId(race.videoUrl);
     if (raceId) ids.add(raceId);
@@ -267,21 +259,6 @@ function buildPlaytimeRankingData() {
     let totalSeconds = 0;
 
     databaseRows.forEach(row => {
-      if (!rowIncludesRunner(row, name, 25)) return;
-
-      const id1 = extractYouTubeId(row.VIDEOURL);
-      const id2 = extractYouTubeId(row.VIDEOURL2);
-
-      if (id1 && typeof videoDurationMap.get(id1) === "number") {
-        totalSeconds += videoDurationMap.get(id1);
-      }
-
-      if (id2 && typeof videoDurationMap.get(id2) === "number") {
-        totalSeconds += videoDurationMap.get(id2);
-      }
-    });
-
-    freeForAllRows.forEach(row => {
       if (!rowIncludesRunner(row, name, 25)) return;
 
       const id1 = extractYouTubeId(row.VIDEOURL);
