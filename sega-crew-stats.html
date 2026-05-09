@@ -1086,6 +1086,245 @@
 .sc-stats-visual-card + .sc-stats-visual-card{
   margin-top:18px;
 }
+
+.sc-console-stats-card{
+  margin-top:24px;
+  background:#f8fbff;
+  border:1px solid var(--border);
+  border-radius:14px;
+  box-shadow:0 6px 18px rgba(0,0,0,0.06);
+  overflow:visible;
+  padding:0 0 22px;
+}
+
+.sc-console-stats-title{
+  background:var(--sega-blue-dark);
+  color:#fff;
+  font-weight:800;
+  letter-spacing:0.3px;
+  text-align:center;
+  padding:10px 14px;
+  border-radius:14px 14px 0 0;
+}
+
+.sc-console-stats-controls{
+  display:flex;
+  justify-content:center;
+  padding:20px 18px 12px;
+}
+
+.sc-console-dropdown{
+  max-width:360px;
+}
+
+.sc-console-stats-body{
+  padding:8px 22px 0;
+  text-align:center;
+}
+
+@media (max-width: 900px){
+  .sc-console-dropdown{
+    max-width:100%;
+  }
+
+  .sc-console-stats-body{
+    padding:8px 16px 0;
+  }
+}
+
+.sc-console-specific-grid{
+  grid-template-columns:repeat(3, 1fr);
+}
+
+.sc-console-specific-table-box{
+  grid-column:1 / 2;
+}
+
+@media (max-width: 900px){
+  .sc-console-specific-grid{
+    grid-template-columns:1fr;
+  }
+
+  .sc-console-specific-table-box{
+    grid-column:auto;
+  }
+}
+
+.sc-console-specific-layout{
+  display:grid;
+  grid-template-columns:minmax(0, 1fr) minmax(0, 1.25fr);
+  gap:18px;
+  align-items:stretch;
+}
+
+.sc-console-library-chart-wrap{
+  min-height:320px;
+  padding:12px 10px 4px;
+}
+
+.sc-console-library-chart-canvas{
+  width:100%;
+  height:100%;
+  display:block;
+}
+
+@media (max-width: 900px){
+  .sc-console-specific-layout{
+    grid-template-columns:1fr;
+  }
+
+  .sc-console-library-chart-wrap{
+    min-height:300px;
+  }
+}
+
+.sc-console-library-tables-grid{
+  margin-top:18px;
+}
+
+.sc-console-library-list-scroll{
+  max-height:340px;
+  overflow-y:auto;
+}
+
+.sc-console-library-list-table th:nth-child(1),
+.sc-console-library-list-table td:nth-child(1){
+  width:16%;
+  text-align:center;
+}
+
+.sc-console-library-list-table th:nth-child(2),
+.sc-console-library-list-table td:nth-child(2){
+  width:84%;
+}
+
+@media (max-width: 900px){
+  .sc-console-library-list-scroll{
+    max-height:280px;
+  }
+}
+
+.sc-twitch-stats-wrap{
+  text-align:left;
+}
+
+.sc-twitch-channel-header{
+  display:flex;
+  align-items:center;
+  gap:16px;
+  background:#f8fbff;
+  border:1px solid var(--border);
+  border-radius:14px;
+  box-shadow:0 6px 18px rgba(0,0,0,0.06);
+  padding:18px;
+  margin-bottom:18px;
+}
+
+.sc-twitch-channel-avatar{
+  width:74px;
+  height:74px;
+  border-radius:999px;
+  object-fit:cover;
+  flex:0 0 auto;
+}
+
+.sc-twitch-channel-info h3{
+  margin:0 0 6px;
+  color:var(--sega-blue-dark);
+  font-size:1.4rem;
+}
+
+.sc-twitch-channel-info p{
+  margin:0;
+  color:var(--muted);
+  line-height:1.5;
+}
+
+.sc-twitch-stat-grid{
+  display:grid;
+  grid-template-columns:repeat(3, 1fr);
+  gap:18px;
+  margin-bottom:18px;
+}
+
+.sc-twitch-stat-card{
+  background:#f8fbff;
+  border:1px solid var(--border);
+  border-radius:14px;
+  box-shadow:0 6px 18px rgba(0,0,0,0.06);
+  padding:18px;
+  text-align:center;
+}
+
+.sc-twitch-stat-label{
+  font-size:0.8rem;
+  font-weight:800;
+  color:var(--sega-blue-dark);
+  letter-spacing:0.4px;
+  text-transform:uppercase;
+  margin-bottom:8px;
+}
+
+.sc-twitch-stat-value{
+  font-size:1.65rem;
+  font-weight:900;
+  color:var(--text);
+  line-height:1.1;
+}
+
+.sc-twitch-stat-sub{
+  margin-top:6px;
+  font-size:0.9rem;
+  color:var(--muted);
+}
+
+.sc-twitch-videos-table-box{
+  margin-top:18px;
+}
+
+.sc-twitch-videos-table-box .sc-stats-table th:nth-child(1),
+.sc-twitch-videos-table-box .sc-stats-table td:nth-child(1){
+  width:18%;
+}
+
+.sc-twitch-videos-table-box .sc-stats-table th:nth-child(2),
+.sc-twitch-videos-table-box .sc-stats-table td:nth-child(2){
+  width:52%;
+  text-align:left;
+}
+
+.sc-twitch-videos-table-box .sc-stats-table th:nth-child(3),
+.sc-twitch-videos-table-box .sc-stats-table td:nth-child(3){
+  width:15%;
+  text-align:center;
+}
+
+.sc-twitch-videos-table-box .sc-stats-table th:nth-child(4),
+.sc-twitch-videos-table-box .sc-stats-table td:nth-child(4){
+  width:15%;
+  text-align:center;
+}
+
+.sc-twitch-videos-table-box a{
+  color:inherit;
+  text-decoration:none;
+  font-weight:inherit;
+}
+
+.sc-twitch-videos-table-box a:hover{
+  text-decoration:underline;
+}
+
+@media (max-width: 900px){
+  .sc-twitch-channel-header{
+    flex-direction:column;
+    text-align:center;
+  }
+
+  .sc-twitch-stat-grid{
+    grid-template-columns:1fr;
+  }
+}
   
 </style>
 

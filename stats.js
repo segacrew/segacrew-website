@@ -10,6 +10,9 @@ document.addEventListener("DOMContentLoaded", () => {
   let raceData = [];
   let currentStatsCharts = [];
   let videoDurationMap = new Map();
+  let activeConsoleStatsType = "Master System";
+  let gameLibraryRows = [];
+  let twitchChannelStats = null;
 
   const wrapper = document.createElement("div");
   wrapper.className = "sc-page-controls sc-stats-controls";
@@ -49,7 +52,11 @@ const CSV_URLS = {
 
   database: IS_LOCAL
     ? "Sega Crew Database - Master Sheet.csv"
-    : "https://stupendous-paletas-199024.netlify.app/Sega Crew Database - Master Sheet.csv"
+    : "https://stupendous-paletas-199024.netlify.app/Sega Crew Database - Master Sheet.csv",
+
+  gameLibrary: IS_LOCAL
+    ? "GAME LIBRARY - MASTER.csv"
+    : "https://stupendous-paletas-199024.netlify.app/GAME LIBRARY - MASTER.csv"
 };
 
 function loadCsv(url) {
@@ -66,6 +73,21 @@ function loadCsv(url) {
       }
     });
   });
+}
+
+async function loadTwitchChannelStats() {
+  try {
+    const response = await fetch("/api/twitch-channel-stats");
+
+    if (!response.ok) {
+      throw new Error(`Twitch stats request failed: ${response.status}`);
+    }
+
+    twitchChannelStats = await response.json();
+  } catch (err) {
+    console.error("Twitch stats load error:", err);
+    twitchChannelStats = null;
+  }
 }
 
   function createStatsButton(label, value) {
@@ -415,6 +437,20 @@ function getRacesForRunner(memberName) {
   return raceData.filter(race => runnerIsInRace(race, memberName));
 }
 
+function getConsoleForRace(race) {
+  const eventName = normalizeName(race.eventName).toLowerCase();
+
+  if (eventName.includes("sega 8")) return "Genesis";
+  if (eventName.includes("mega 16")) return "Genesis";
+  if (eventName.includes("sega 16")) return "Genesis";
+  if (eventName.includes("master 8")) return "Master System";
+  if (eventName.includes("5g game gear")) return "Game Gear";
+  if (eventName.includes("saturn8lia")) return "Saturn";
+  if (eventName.includes("shinobi")) return "Genesis";
+
+  return "";
+}
+
 function destroyStatsChart() {
   currentStatsCharts.forEach(chart => chart.destroy());
   currentStatsCharts = [];
@@ -504,6 +540,111 @@ function renderTopRunsPieChart(canvas) {
   });
   
   currentStatsCharts.push(chart);  
+}
+
+function buildMostPlayedGamesRankingData() {
+  const gameCounts = new Map();
+
+  function addGame(gameName) {
+    const game = normalizeName(gameName);
+    if (!game) return;
+
+    const gameKey = normalizeKey(game);
+
+    if (!gameCounts.has(gameKey)) {
+      gameCounts.set(gameKey, {
+        name: game,
+        value: 0
+      });
+    }
+
+    gameCounts.get(gameKey).value++;
+  }
+
+  // Main database
+  databaseRows.forEach(row => {
+    addGame(row.GAME);
+  });
+
+  // Free For All database
+  freeForAllRows.forEach(row => {
+    addGame(row.GAME);
+  });
+
+  // Races database
+  raceData.forEach(race => {
+    race.games.forEach(game => {
+      addGame(game);
+    });
+  });
+
+  return [...gameCounts.values()]
+    .sort((a, b) => {
+      if (b.value !== a.value) return b.value - a.value;
+      return a.name.localeCompare(b.name);
+    });
+}
+
+function buildGamesByUniqueRunnersRankingData() {
+  const gameRunnerMap = new Map();
+
+  function addGameRunner(gameName, runnerName) {
+    const game = normalizeName(gameName);
+    const runner = normalizeName(runnerName);
+
+    if (!game || !runner) return;
+
+    const gameKey = normalizeKey(game);
+    const runnerKey = normalizeHandle(runner);
+
+    if (!gameRunnerMap.has(gameKey)) {
+      gameRunnerMap.set(gameKey, {
+        name: game,
+        runners: new Set()
+      });
+    }
+
+    gameRunnerMap.get(gameKey).runners.add(runnerKey);
+  }
+
+  // Main database
+  databaseRows.forEach(row => {
+    const game = normalizeName(row.GAME);
+    if (!game) return;
+
+    getNamesFromColumns(row, "RUNNER", 25).forEach(runner => {
+      addGameRunner(game, runner);
+    });
+  });
+
+  // Free For All database
+  freeForAllRows.forEach(row => {
+    const game = normalizeName(row.GAME);
+    if (!game) return;
+
+    getNamesFromColumns(row, "RUNNER", 25).forEach(runner => {
+      addGameRunner(game, runner);
+    });
+  });
+
+  // Races database
+  raceData.forEach(race => {
+    race.games.forEach(game => {
+      race.runners.forEach(runner => {
+        addGameRunner(game, runner.name);
+      });
+    });
+  });
+
+  return [...gameRunnerMap.values()]
+    .map(item => ({
+      name: item.name,
+      value: item.runners.size
+    }))
+    .sort((a, b) => {
+      if (b.value !== a.value) return b.value - a.value;
+      return a.name.localeCompare(b.name);
+    });
 }
 
 function getUniqueMemberNames() {
@@ -666,6 +807,54 @@ function buildActiveMembersByYearData() {
     .sort((a, b) => Number(a.year) - Number(b.year));
 }
 
+function buildMostPlayedConsolesRankingData() {
+  const consoleCounts = new Map();
+
+  function addConsole(consoleName, count = 1) {
+    const cleanConsole = normalizeName(consoleName);
+    if (!cleanConsole) return;
+
+    const consoleKey = normalizeKey(cleanConsole);
+
+    if (!consoleCounts.has(consoleKey)) {
+      consoleCounts.set(consoleKey, {
+        name: cleanConsole,
+        value: 0
+      });
+    }
+
+    consoleCounts.get(consoleKey).value += count;
+  }
+
+  // Main database
+  databaseRows.forEach(row => {
+    addConsole(row.CONSOLE);
+  });
+
+  // Free For All database
+  freeForAllRows.forEach(row => {
+    addConsole(row.CONSOLE);
+  });
+
+  // Races database
+  raceData.forEach(race => {
+    const raceConsole = getConsoleForRace(race);
+    if (!raceConsole) return;
+
+    race.games.forEach(game => {
+      if (normalizeName(game)) {
+        addConsole(raceConsole);
+      }
+    });
+  });
+
+  return [...consoleCounts.values()]
+    .sort((a, b) => {
+      if (b.value !== a.value) return b.value - a.value;
+      return a.name.localeCompare(b.name);
+    });
+}
+
 function parseEventDate(dateStr) {
   const raw = normalizeName(dateStr);
   if (!raw) return null;
@@ -768,6 +957,337 @@ function getActiveDateRangeForRunner(memberName) {
       Math.floor((dates[dates.length - 1] - dates[0]) / 86400000)
     )
   };
+}
+
+function buildMostPlayedGamesForConsoleRankingData(consoleName) {
+  const selectedConsole = normalizeConsoleForMatch(consoleName);
+  const gameCounts = new Map();
+
+  function addGame(gameName) {
+    const game = normalizeName(gameName);
+    if (!game) return;
+
+    const gameKey = normalizeKey(game);
+
+    if (!gameCounts.has(gameKey)) {
+      gameCounts.set(gameKey, {
+        name: game,
+        value: 0
+      });
+    }
+
+    gameCounts.get(gameKey).value++;
+  }
+
+  // Main database
+  databaseRows.forEach(row => {
+    if (normalizeConsoleForMatch(row.CONSOLE) !== selectedConsole) return;
+    addGame(row.GAME);
+  });
+
+  // Free For All database
+  freeForAllRows.forEach(row => {
+    if (normalizeConsoleForMatch(row.CONSOLE) !== selectedConsole) return;
+    addGame(row.GAME);
+  });
+
+  // Races database
+  raceData.forEach(race => {
+    if (normalizeConsoleForMatch(getConsoleForRace(race)) !== selectedConsole) return;
+
+    race.games.forEach(game => {
+      addGame(game);
+    });
+  });
+
+  return [...gameCounts.values()]
+    .sort((a, b) => {
+      if (b.value !== a.value) return b.value - a.value;
+      return a.name.localeCompare(b.name);
+    });
+}
+
+function normalizeGameForLibraryMatch(value) {
+  return normalizeName(value)
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]/g, "")
+    .trim();
+}
+
+function normalizeConsoleForMatch(value) {
+  const clean = normalizeName(value).toLowerCase();
+
+  if (clean === "mega drive") return "genesis";
+  if (clean === "genesis") return "genesis";
+
+  if (clean === "mega cd") return "sega cd";
+  if (clean === "sega cd") return "sega cd";
+
+  return clean;
+}
+
+function getLibraryGamesForConsole(consoleName) {
+  const games = [];
+
+  gameLibraryRows.forEach(row => {
+    const game = normalizeName(row[consoleName]);
+    if (game) games.push(game);
+  });
+
+  return games;
+}
+
+function buildConsoleLibraryCoverageData(consoleName) {
+  const selectedConsole = normalizeConsoleForMatch(consoleName);
+
+  const libraryGames = getLibraryGamesForConsole(consoleName);
+
+  const libraryMap = new Map();
+
+  libraryGames.forEach(game => {
+    const key = normalizeGameForLibraryMatch(game);
+    if (!key) return;
+
+    if (!libraryMap.has(key)) {
+      libraryMap.set(key, game);
+    }
+  });
+
+  const mainShowcased = new Set();
+  const otherShowcased = new Set();
+
+  // Main database = uniquely showcased
+  databaseRows.forEach(row => {
+    if (normalizeConsoleForMatch(row.CONSOLE) !== selectedConsole) return;
+
+    const gameKey = normalizeGameForLibraryMatch(row.GAME);
+    if (gameKey && libraryMap.has(gameKey)) {
+      mainShowcased.add(gameKey);
+    }
+  });
+
+  // Free For All = race / special event showcase
+  freeForAllRows.forEach(row => {
+    if (normalizeConsoleForMatch(row.CONSOLE) !== selectedConsole) return;
+
+    const gameKey = normalizeGameForLibraryMatch(row.GAME);
+    if (gameKey && libraryMap.has(gameKey) && !mainShowcased.has(gameKey)) {
+      otherShowcased.add(gameKey);
+    }
+  });
+
+  // Races = race / special event showcase
+  raceData.forEach(race => {
+    if (normalizeConsoleForMatch(getConsoleForRace(race)) !== selectedConsole) return;
+
+    race.games.forEach(game => {
+      const gameKey = normalizeGameForLibraryMatch(game);
+      if (gameKey && libraryMap.has(gameKey) && !mainShowcased.has(gameKey)) {
+        otherShowcased.add(gameKey);
+      }
+    });
+  });
+
+  const uniquelyShowcasedGames = [...mainShowcased]
+    .map(key => libraryMap.get(key))
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b));
+
+  const raceSpecialGames = [...otherShowcased]
+    .map(key => libraryMap.get(key))
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b));
+
+  const yetToBeShowcasedGames = [...libraryMap.entries()]
+    .filter(([key]) => !mainShowcased.has(key) && !otherShowcased.has(key))
+    .map(([, game]) => game)
+    .sort((a, b) => a.localeCompare(b));
+
+  const totalLibrary = libraryMap.size;
+
+  return {
+    labels: [
+      "Uniquely Showcased",
+      "Race / Special Event",
+      "Yet to Be Showcased"
+    ],
+    values: [
+      uniquelyShowcasedGames.length,
+      raceSpecialGames.length,
+      yetToBeShowcasedGames.length
+    ],
+    totalLibrary,
+    uniquelyShowcasedGames,
+    raceSpecialGames,
+    yetToBeShowcasedGames
+  };
+}
+
+function formatNumber(value) {
+  if (value === null || value === undefined || value === "") return "—";
+  return Number(value).toLocaleString();
+}
+
+function formatDateText(dateStr) {
+  const date = new Date(dateStr);
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return "—";
+
+  return date.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric"
+  });
+}
+
+function buildTwitchStatCard(label, value, subtext = "") {
+  const card = document.createElement("div");
+  card.className = "sc-twitch-stat-card";
+
+  card.innerHTML = `
+    <div class="sc-twitch-stat-label">${escapeHtml(label)}</div>
+    <div class="sc-twitch-stat-value">${escapeHtml(value)}</div>
+    ${subtext ? `<div class="sc-twitch-stat-sub">${escapeHtml(subtext)}</div>` : ""}
+  `;
+
+  return card;
+}
+
+function buildSegaCrewTwitchStatsPanel() {
+  const wrap = document.createElement("div");
+  wrap.className = "sc-twitch-stats-wrap";
+
+  if (!twitchChannelStats || twitchChannelStats.error) {
+    const msg = document.createElement("p");
+    msg.className = "sc-results-message";
+    msg.textContent = "Could not load Twitch channel stats.";
+    wrap.appendChild(msg);
+    return wrap;
+  }
+
+  const channel = twitchChannelStats.channel || {};
+  const live = twitchChannelStats.live || {};
+  const videos = twitchChannelStats.recentVideos || [];
+
+  const header = document.createElement("div");
+  header.className = "sc-twitch-channel-header";
+
+  header.innerHTML = `
+    ${channel.profileImageUrl ? `
+      <img class="sc-twitch-channel-avatar" src="${escapeHtml(channel.profileImageUrl)}" alt="">
+    ` : ""}
+    <div class="sc-twitch-channel-info">
+      <h3>${escapeHtml(channel.displayName || "Sega Crew")}</h3>
+      <p>${escapeHtml(channel.description || "Twitch channel statistics")}</p>
+    </div>
+  `;
+
+  const statGrid = document.createElement("div");
+  statGrid.className = "sc-twitch-stat-grid";
+
+  statGrid.appendChild(
+    buildTwitchStatCard(
+      "Followers",
+      formatNumber(channel.followers)
+    )
+  );
+
+  statGrid.appendChild(
+    buildTwitchStatCard(
+      "Channel Views",
+      formatNumber(channel.viewCount)
+    )
+  );
+
+  statGrid.appendChild(
+    buildTwitchStatCard(
+      "Account Created",
+      formatDateText(channel.createdAt)
+    )
+  );
+
+  statGrid.appendChild(
+    buildTwitchStatCard(
+      "Live Status",
+      live.isLive ? "LIVE" : "Offline",
+      live.isLive ? `${live.viewerCount || 0} viewers` : ""
+    )
+  );
+
+  statGrid.appendChild(
+    buildTwitchStatCard(
+      "Current Category",
+      channel.currentGame || "—"
+    )
+  );
+
+  statGrid.appendChild(
+    buildTwitchStatCard(
+      "Recent VODs",
+      formatNumber(videos.length)
+    )
+  );
+
+  wrap.appendChild(header);
+  wrap.appendChild(statGrid);
+  wrap.appendChild(buildRecentTwitchVideosTable(videos));
+
+  return wrap;
+}
+
+function buildRecentTwitchVideosTable(videos) {
+  const tableBox = document.createElement("div");
+  tableBox.className = "sc-stats-table-box sc-twitch-videos-table-box";
+
+  const title = document.createElement("div");
+  title.className = "sc-stats-table-title";
+  title.textContent = "RECENT TWITCH VODS";
+
+  const table = document.createElement("table");
+  table.className = "sc-stats-table";
+
+  const thead = document.createElement("thead");
+  thead.innerHTML = `
+    <tr>
+      <th>DATE</th>
+      <th>TITLE</th>
+      <th>DURATION</th>
+      <th>VIEWS</th>
+    </tr>
+  `;
+
+  const tbody = document.createElement("tbody");
+
+  if (!videos.length) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td colspan="4">No recent VODs found.</td>`;
+    tbody.appendChild(tr);
+  } else {
+    videos.forEach(video => {
+      const tr = document.createElement("tr");
+
+      tr.innerHTML = `
+        <td>${escapeHtml(formatDateText(video.publishedAt))}</td>
+        <td>
+          <a href="${escapeHtml(video.url)}" target="_blank" rel="noopener noreferrer">
+            ${escapeHtml(video.title)}
+          </a>
+        </td>
+        <td>${escapeHtml(video.duration || "—")}</td>
+        <td>${escapeHtml(formatNumber(video.viewCount))}</td>
+      `;
+
+      tbody.appendChild(tr);
+    });
+  }
+
+  table.appendChild(thead);
+  table.appendChild(tbody);
+
+  tableBox.appendChild(title);
+  tableBox.appendChild(table);
+
+  return tableBox;
 }
 
 function isShinobiMonthlyRace(race) {
@@ -882,6 +1402,51 @@ function addGameForRunner(runnerStats, runnerName, gameName) {
   }
 
   runnerStats.get(runnerKey).games.add(gameKey);
+}
+
+function renderConsoleLibraryCoverageChart(canvas, consoleName) {
+  const coverage = buildConsoleLibraryCoverageData(consoleName);
+
+  const chart = new Chart(canvas, {
+    type: "pie",
+    data: {
+      labels: coverage.labels,
+      datasets: [{
+        data: coverage.values,
+        backgroundColor: [
+          "#0072B2",
+          "#E69F00",
+          "#D9D9D9"
+        ],
+        borderColor: "#ffffff",
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: "bottom"
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              const label = context.label || "";
+              const value = context.parsed || 0;
+              const percent = coverage.totalLibrary
+                ? ((value / coverage.totalLibrary) * 100).toFixed(1)
+                : "0.0";
+
+              return `${label}: ${value} games (${percent}% of library)`;
+            }
+          }
+        }
+      }
+    }
+  });
+
+  currentStatsCharts.push(chart);
 }
 
 function buildMostUniqueGamesTable() {
@@ -1252,6 +1817,266 @@ function buildTotalPlaytimeTable() {
   return tableBox;
 }
 
+function buildMostPlayedGamesTable() {
+  const data = buildMostPlayedGamesRankingData().slice(0, 5);
+
+  const tableBox = document.createElement("div");
+  tableBox.className = "sc-stats-table-box";
+
+  const title = document.createElement("div");
+  title.className = "sc-stats-table-title";
+  title.textContent = "MOST PLAYED GAMES";
+
+  const table = document.createElement("table");
+  table.className = "sc-stats-table";
+
+  const thead = document.createElement("thead");
+  thead.innerHTML = `
+    <tr>
+      <th></th>
+      <th>GAME</th>
+      <th>RUNS</th>
+    </tr>
+  `;
+
+  const tbody = document.createElement("tbody");
+
+  data.forEach((item, index) => {
+    const tr = document.createElement("tr");
+
+    tr.innerHTML = `
+      <td>${index + 1}</td>
+      <td>${escapeHtml(item.name)}</td>
+      <td>${escapeHtml(item.value)}</td>
+    `;
+
+    tbody.appendChild(tr);
+  });
+
+  table.appendChild(thead);
+  table.appendChild(tbody);
+
+  tableBox.appendChild(title);
+  tableBox.appendChild(table);
+
+  return tableBox;
+}
+
+function buildMostPlayedConsolesTable() {
+  const data = buildMostPlayedConsolesRankingData().slice(0, 5);
+
+  const tableBox = document.createElement("div");
+  tableBox.className = "sc-stats-table-box";
+
+  const title = document.createElement("div");
+  title.className = "sc-stats-table-title";
+  title.textContent = "MOST PLAYED CONSOLES";
+
+  const table = document.createElement("table");
+  table.className = "sc-stats-table";
+
+  const thead = document.createElement("thead");
+  thead.innerHTML = `
+    <tr>
+      <th></th>
+      <th>CONSOLE</th>
+      <th>RUNS</th>
+    </tr>
+  `;
+
+  const tbody = document.createElement("tbody");
+
+  data.forEach((item, index) => {
+    const tr = document.createElement("tr");
+
+    tr.innerHTML = `
+      <td>${index + 1}</td>
+      <td>${escapeHtml(item.name)}</td>
+      <td>${escapeHtml(item.value)}</td>
+    `;
+
+    tbody.appendChild(tr);
+  });
+
+  table.appendChild(thead);
+  table.appendChild(tbody);
+
+  tableBox.appendChild(title);
+  tableBox.appendChild(table);
+
+  return tableBox;
+}
+
+function buildGamesByUniqueRunnersTable() {
+  const data = buildGamesByUniqueRunnersRankingData().slice(0, 5);
+
+  const tableBox = document.createElement("div");
+  tableBox.className = "sc-stats-table-box";
+
+  const title = document.createElement("div");
+  title.className = "sc-stats-table-title";
+  title.textContent = "GAMES WITH MOST RUNNERS";
+
+  const table = document.createElement("table");
+  table.className = "sc-stats-table";
+
+  const thead = document.createElement("thead");
+  thead.innerHTML = `
+    <tr>
+      <th></th>
+      <th>GAME</th>
+      <th>RUNNERS</th>
+    </tr>
+  `;
+
+  const tbody = document.createElement("tbody");
+
+  data.forEach((item, index) => {
+    const tr = document.createElement("tr");
+
+    tr.innerHTML = `
+      <td>${index + 1}</td>
+      <td>${escapeHtml(item.name)}</td>
+      <td>${escapeHtml(item.value)}</td>
+    `;
+
+    tbody.appendChild(tr);
+  });
+
+  table.appendChild(thead);
+  table.appendChild(tbody);
+
+  tableBox.appendChild(title);
+  tableBox.appendChild(table);
+
+  return tableBox;
+}
+
+
+function buildConsoleStatsCard() {
+  const card = document.createElement("div");
+  card.className = "sc-console-stats-card";
+
+  const title = document.createElement("div");
+  title.className = "sc-console-stats-title";
+  title.textContent = "CONSOLE SPECIFIC STATISTICS";
+
+  const controls = document.createElement("div");
+  controls.className = "sc-console-stats-controls";
+
+  const dropdown = document.createElement("div");
+  dropdown.className = "sc-dropdown sc-console-dropdown";
+
+  const trigger = document.createElement("button");
+  trigger.type = "button";
+  trigger.className = "sc-dropdown-trigger";
+  trigger.setAttribute("aria-haspopup", "listbox");
+  trigger.setAttribute("aria-expanded", "false");
+  trigger.textContent = activeConsoleStatsType;
+
+  const menu = document.createElement("div");
+  menu.className = "sc-dropdown-menu";
+  menu.setAttribute("role", "listbox");
+
+  const consoles = [
+    "Master System",
+    "Genesis",
+    "Game Gear",
+    "Sega CD",
+    "Sega 32X",
+    "Saturn",
+    "Dreamcast"
+  ];
+
+  consoles.forEach(consoleName => {
+    const item = document.createElement("button");
+    item.type = "button";
+    item.className = "sc-dropdown-item";
+    item.textContent = consoleName;
+    item.dataset.value = consoleName;
+
+    item.addEventListener("click", () => {
+      activeConsoleStatsType = consoleName;
+      trigger.textContent = consoleName;
+      closeConsoleStatsMenu(dropdown, trigger);
+      renderConsoleStatsBody(body);
+    });
+
+    menu.appendChild(item);
+  });
+
+  trigger.addEventListener("click", (e) => {
+    e.stopPropagation();
+
+    if (dropdown.classList.contains("open")) {
+      closeConsoleStatsMenu(dropdown, trigger);
+    } else {
+      openConsoleStatsMenu(dropdown, trigger, menu);
+    }
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!dropdown.contains(e.target)) {
+      closeConsoleStatsMenu(dropdown, trigger);
+    }
+  });
+
+  const body = document.createElement("div");
+  body.className = "sc-console-stats-body";
+
+  dropdown.appendChild(trigger);
+  dropdown.appendChild(menu);
+
+  controls.appendChild(dropdown);
+
+  card.appendChild(title);
+  card.appendChild(controls);
+  card.appendChild(body);
+
+  renderConsoleStatsBody(body);
+
+  return card;
+}
+
+function openConsoleStatsMenu(dropdown, trigger, menu) {
+  dropdown.classList.add("open");
+  trigger.setAttribute("aria-expanded", "true");
+
+  requestAnimationFrame(() => {
+    const selectedItem = [...menu.querySelectorAll(".sc-dropdown-item")].find(
+      item => normalizeName(item.dataset.value) === activeConsoleStatsType
+    );
+
+    if (selectedItem) {
+      selectedItem.scrollIntoView({ block: "center" });
+    }
+  });
+}
+
+function closeConsoleStatsMenu(dropdown, trigger) {
+  dropdown.classList.remove("open");
+  trigger.setAttribute("aria-expanded", "false");
+}
+
+function renderConsoleStatsBody(container) {
+  container.innerHTML = "";
+
+  const consoleStatsGrid = document.createElement("div");
+  consoleStatsGrid.className = "sc-console-specific-layout";
+
+  consoleStatsGrid.appendChild(
+    buildConsoleMostPlayedGamesTable(activeConsoleStatsType)
+  );
+
+  consoleStatsGrid.appendChild(
+    buildConsoleLibraryCoverageChart(activeConsoleStatsType)
+  );
+
+  const libraryTables = buildConsoleLibraryTables(activeConsoleStatsType);
+
+  container.appendChild(consoleStatsGrid);
+  container.appendChild(libraryTables);
+}
 
 function renderStatsPanel() {
   clearResults();
@@ -1291,26 +2116,177 @@ function renderStatsPanel() {
     card.appendChild(visualSection);
     
   } else if (activeStatsType === "game") {
-    title.textContent = "Game Stats";
+  title.textContent = "Game Stats";
 
-    const placeholder = document.createElement("p");
-    placeholder.className = "sc-results-message";
-    placeholder.textContent = "Stats will appear here.";
+  const statsGrid = document.createElement("div");
+  statsGrid.className = "sc-stats-table-grid";
 
-    card.appendChild(title);
-    card.appendChild(placeholder);
-  } else {
-    title.textContent = "Sega Crew Stats";
+  statsGrid.appendChild(buildMostPlayedGamesTable());
+  statsGrid.appendChild(buildMostPlayedConsolesTable());
+  statsGrid.appendChild(buildGamesByUniqueRunnersTable());
 
-    const placeholder = document.createElement("p");
-    placeholder.className = "sc-results-message";
-    placeholder.textContent = "Stats will appear here.";
+  const consoleStatsCard = buildConsoleStatsCard();
 
-    card.appendChild(title);
-    card.appendChild(placeholder);
-  }
+  card.appendChild(title);
+  card.appendChild(statsGrid);
+  card.appendChild(consoleStatsCard);
+
+  }  else {
+  title.textContent = "Sega Crew Stats";
+
+  card.appendChild(title);
+  card.appendChild(buildSegaCrewTwitchStatsPanel());
+}
 
   resultsWrap.appendChild(card);
+}
+
+function buildConsoleMostPlayedGamesTable(consoleName) {
+  const data = buildMostPlayedGamesForConsoleRankingData(consoleName).slice(0, 10);
+
+  const tableBox = document.createElement("div");
+  tableBox.className = "sc-stats-table-box sc-console-specific-table-box";
+
+  const title = document.createElement("div");
+  title.className = "sc-stats-table-title";
+  title.textContent = `MOST PLAYED ${consoleName.toUpperCase()} GAMES`;
+
+  const table = document.createElement("table");
+  table.className = "sc-stats-table";
+
+  const thead = document.createElement("thead");
+  thead.innerHTML = `
+    <tr>
+      <th></th>
+      <th>GAME</th>
+      <th>RUNS</th>
+    </tr>
+  `;
+
+  const tbody = document.createElement("tbody");
+
+  if (!data.length) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td colspan="3">No games found.</td>`;
+    tbody.appendChild(tr);
+  } else {
+    data.forEach((item, index) => {
+      const tr = document.createElement("tr");
+
+      tr.innerHTML = `
+        <td>${index + 1}</td>
+        <td>${escapeHtml(item.name)}</td>
+        <td>${escapeHtml(item.value)}</td>
+      `;
+
+      tbody.appendChild(tr);
+    });
+  }
+
+  table.appendChild(thead);
+  table.appendChild(tbody);
+
+  tableBox.appendChild(title);
+  tableBox.appendChild(table);
+
+  return tableBox;
+}
+
+function buildConsoleLibraryCoverageChart(consoleName) {
+  const chartWrap = document.createElement("div");
+  chartWrap.className = "sc-console-library-chart-wrap";
+
+  const canvas = document.createElement("canvas");
+  canvas.className = "sc-console-library-chart-canvas";
+
+  chartWrap.appendChild(canvas);
+
+  requestAnimationFrame(() => {
+    renderConsoleLibraryCoverageChart(canvas, consoleName);
+  });
+
+  return chartWrap;
+}
+
+function buildConsoleLibraryListTable(titleText, games) {
+  const tableBox = document.createElement("div");
+  tableBox.className = "sc-stats-table-box sc-console-library-list-box";
+
+  const title = document.createElement("div");
+  title.className = "sc-stats-table-title";
+  title.textContent = `${titleText} (${games.length})`;
+
+  const tableWrap = document.createElement("div");
+  tableWrap.className = "sc-console-library-list-scroll";
+
+  const table = document.createElement("table");
+  table.className = "sc-stats-table sc-console-library-list-table";
+
+  const thead = document.createElement("thead");
+  thead.innerHTML = `
+    <tr>
+      <th></th>
+      <th>GAME</th>
+    </tr>
+  `;
+
+  const tbody = document.createElement("tbody");
+
+  if (!games.length) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td colspan="2">No games found.</td>`;
+    tbody.appendChild(tr);
+  } else {
+    games.forEach((game, index) => {
+      const tr = document.createElement("tr");
+
+      tr.innerHTML = `
+        <td>${index + 1}</td>
+        <td>${escapeHtml(game)}</td>
+      `;
+
+      tbody.appendChild(tr);
+    });
+  }
+
+  table.appendChild(thead);
+  table.appendChild(tbody);
+
+  tableWrap.appendChild(table);
+  tableBox.appendChild(title);
+  tableBox.appendChild(tableWrap);
+
+  return tableBox;
+}
+
+function buildConsoleLibraryTables(consoleName) {
+  const coverage = buildConsoleLibraryCoverageData(consoleName);
+
+  const tablesWrap = document.createElement("div");
+  tablesWrap.className = "sc-stats-table-grid sc-console-library-tables-grid";
+
+  tablesWrap.appendChild(
+    buildConsoleLibraryListTable(
+      "UNIQUELY SHOWCASED",
+      coverage.uniquelyShowcasedGames
+    )
+  );
+
+  tablesWrap.appendChild(
+    buildConsoleLibraryListTable(
+      "RACE / SPECIAL EVENT",
+      coverage.raceSpecialGames
+    )
+  );
+
+  tablesWrap.appendChild(
+    buildConsoleLibraryListTable(
+      "YET TO BE SHOWCASED",
+      coverage.yetToBeShowcasedGames
+    )
+  );
+
+  return tablesWrap;
 }
 
 function loadAllStatsCsvs() {
@@ -1321,30 +2297,32 @@ function loadAllStatsCsvs() {
   loading.textContent = "Loading stats...";
   resultsWrap.appendChild(loading);
 
-  Promise.all([
-    loadCsv(CSV_URLS.races),
-    loadCsv(CSV_URLS.freeForAll),
-    loadCsv(CSV_URLS.database)
-  ]).then(([racesData, freeForAllData, databaseData]) => {
-    racesRows = racesData;
-    freeForAllRows = freeForAllData;
-    databaseRows = databaseData;
-    raceData = buildRaceDatabase(racesRows);
+Promise.all([
+  loadCsv(CSV_URLS.races),
+  loadCsv(CSV_URLS.freeForAll),
+  loadCsv(CSV_URLS.database),
+  loadCsv(CSV_URLS.gameLibrary)
+]).then(async ([racesData, freeForAllData, databaseData, gameLibraryData]) => {
+  racesRows = racesData;
+  freeForAllRows = freeForAllData;
+  databaseRows = databaseData;
+  gameLibraryRows = gameLibraryData;
+  raceData = buildRaceDatabase(racesRows);
 
-preloadAllVideoDurations().then(() => {
+  await preloadAllVideoDurations();
+  await loadTwitchChannelStats();
+
   renderStatsPanel();
+}).catch(err => {
+  console.error("Stats CSV load error:", err);
+
+  resultsWrap.innerHTML = "";
+
+  const errorMsg = document.createElement("p");
+  errorMsg.className = "sc-results-message";
+  errorMsg.textContent = "Could not load stats CSV data.";
+  resultsWrap.appendChild(errorMsg);
 });
-
-  }).catch(err => {
-    console.error("Stats CSV load error:", err);
-
-    resultsWrap.innerHTML = "";
-
-    const errorMsg = document.createElement("p");
-    errorMsg.className = "sc-results-message";
-    errorMsg.textContent = "Could not load stats CSV data.";
-    resultsWrap.appendChild(errorMsg);
-  });
   
 }
 
