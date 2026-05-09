@@ -2350,7 +2350,6 @@ function renderStatsPanel() {
     raceStatsGrid.appendChild(buildMostRaceWinsTable());
     raceStatsGrid.appendChild(buildTotalPlaytimeTable());
 
-    card.appendChild(title);
     card.appendChild(statsGrid);
     card.appendChild(raceStatsGrid);
     card.appendChild(visualSection);
