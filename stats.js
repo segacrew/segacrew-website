@@ -77,7 +77,7 @@ function loadCsv(url) {
 
 async function loadTwitchChannelStats() {
   try {
-    const response = await fetch("/api/twitch-channel-stats");
+    const response = await fetch("/.netlify/functions/twitch-channel-stats");
 
     if (!response.ok) {
       throw new Error(`Twitch stats request failed: ${response.status}`);
