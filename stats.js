@@ -1167,7 +1167,7 @@ function buildSegaCrewTwitchStatsPanel() {
 
   const channel = twitchChannelStats.channel || {};
   const live = twitchChannelStats.live || {};
-  const videos = twitchChannelStats.recentVideos || [];
+  const clips = twitchChannelStats.recentClips || [];
 
   const header = document.createElement("div");
   header.className = "sc-twitch-channel-header";
@@ -1223,25 +1223,25 @@ function buildSegaCrewTwitchStatsPanel() {
 
   statGrid.appendChild(
     buildTwitchStatCard(
-      "Recent VODs",
-      formatNumber(videos.length)
-    )
+  "Recent Clips",
+  formatNumber(clips.length)
+)
   );
 
   wrap.appendChild(header);
   wrap.appendChild(statGrid);
-  wrap.appendChild(buildRecentTwitchVideosTable(videos));
+  wrap.appendChild(buildRecentTwitchClipsTable(clips));
 
   return wrap;
 }
 
-function buildRecentTwitchVideosTable(videos) {
+function buildRecentTwitchClipsTable(clips) {
   const tableBox = document.createElement("div");
-  tableBox.className = "sc-stats-table-box sc-twitch-videos-table-box";
+  tableBox.className = "sc-stats-table-box sc-twitch-clips-table-box";
 
   const title = document.createElement("div");
   title.className = "sc-stats-table-title";
-  title.textContent = "RECENT TWITCH VODS";
+  title.textContent = "RECENT TWITCH CLIPS";
 
   const table = document.createElement("table");
   table.className = "sc-stats-table";
@@ -1251,6 +1251,7 @@ function buildRecentTwitchVideosTable(videos) {
     <tr>
       <th>DATE</th>
       <th>TITLE</th>
+      <th>CREATOR</th>
       <th>DURATION</th>
       <th>VIEWS</th>
     </tr>
@@ -1258,23 +1259,24 @@ function buildRecentTwitchVideosTable(videos) {
 
   const tbody = document.createElement("tbody");
 
-  if (!videos.length) {
+  if (!clips.length) {
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td colspan="4">No recent VODs found.</td>`;
+    tr.innerHTML = `<td colspan="5">No recent clips found.</td>`;
     tbody.appendChild(tr);
   } else {
-    videos.forEach(video => {
+    clips.forEach(clip => {
       const tr = document.createElement("tr");
 
       tr.innerHTML = `
-        <td>${escapeHtml(formatDateText(video.publishedAt))}</td>
+        <td>${escapeHtml(formatDateText(clip.createdAt))}</td>
         <td>
-          <a href="${escapeHtml(video.url)}" target="_blank" rel="noopener noreferrer">
-            ${escapeHtml(video.title)}
+          <a href="${escapeHtml(clip.url)}" target="_blank" rel="noopener noreferrer">
+            ${escapeHtml(clip.title)}
           </a>
         </td>
-        <td>${escapeHtml(video.duration || "—")}</td>
-        <td>${escapeHtml(formatNumber(video.viewCount))}</td>
+        <td>${escapeHtml(clip.creatorName || "—")}</td>
+        <td>${escapeHtml(clip.duration ? `${Math.round(clip.duration)}s` : "—")}</td>
+        <td>${escapeHtml(formatNumber(clip.viewCount))}</td>
       `;
 
       tbody.appendChild(tr);
