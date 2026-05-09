@@ -13,6 +13,17 @@ document.addEventListener("DOMContentLoaded", () => {
   let activeConsoleStatsType = "Master System";
   let gameLibraryRows = [];
   let twitchChannelStats = null;
+  
+  let statsCache = {
+  uniqueGamesRanking: [],
+  eventsRanking: [],
+  timeActiveRanking: [],
+  totalRunsRanking: [],
+  mostRacesRanking: [],
+  raceWinsRanking: [],
+  playtimeRanking: [],
+  activeMembersByYear: []
+};
 
   const wrapper = document.createElement("div");
   wrapper.className = "sc-page-controls sc-stats-controls";
@@ -534,7 +545,7 @@ function buildTotalRunsRankingData() {
 function renderTopRunsPieChart(canvas) {
   destroyStatsChart();
 
-  const fullRanking = buildTotalRunsRankingData();
+  const fullRanking = statsCache.totalRunsRanking;
   const ranking = fullRanking.slice(0, 10);
 
   const labels = ranking.map(item => item.name);
@@ -1679,7 +1690,7 @@ function renderConsoleLibraryCoverageChart(canvas, consoleName) {
 }
 
 function buildMostUniqueGamesTable() {
-  const data = buildUniqueGamesRankingData().slice(0, 5);
+  const data = statsCache.uniqueGamesRanking.slice(0, 5);
 
   const tableBox = document.createElement("div");
   tableBox.className = "sc-stats-table-box";
@@ -1724,7 +1735,7 @@ function buildMostUniqueGamesTable() {
 }
 
 function buildMostEventsTable() {
-  const data = buildEventsRankingData().slice(0, 5);
+  const data = statsCache.eventsRanking.slice(0, 5);
 
   const tableBox = document.createElement("div");
   tableBox.className = "sc-stats-table-box";
@@ -1769,7 +1780,7 @@ function buildMostEventsTable() {
 }
 
 function buildLongestActiveMembersTable() {
-  const data = buildTimeActiveRankingData().slice(0, 5);
+  const data = statsCache.timeActiveRanking.slice(0, 5);
 
   const tableBox = document.createElement("div");
   tableBox.className = "sc-stats-table-box";
@@ -1839,7 +1850,7 @@ function buildTopRunsPieChartCard() {
 }
 
 function buildMostRacesTable() {
-  const data = buildMostRacesRankingData().slice(0, 5);
+  const data = statsCache.mostRacesRanking.slice(0, 5);
 
   const tableBox = document.createElement("div");
   tableBox.className = "sc-stats-table-box";
@@ -1884,7 +1895,7 @@ function buildMostRacesTable() {
 }
 
 function buildMostRaceWinsTable() {
-  const data = buildMostRaceWinsRankingData().slice(0, 5);
+  const data = statsCache.raceWinsRanking.slice(0, 5);
 
   const tableBox = document.createElement("div");
   tableBox.className = "sc-stats-table-box";
@@ -1929,7 +1940,7 @@ function buildMostRaceWinsTable() {
 }
 
 function renderActiveMembersByYearBarChart(canvas) {
-  const data = buildActiveMembersByYearData();
+  const data = statsCache.activeMembersByYear;
 
   const labels = data.map(item => item.year);
   const values = data.map(item => item.count);
@@ -2002,7 +2013,7 @@ function buildActiveMembersByYearChartCard() {
 }
 
 function buildTotalPlaytimeTable() {
-  const data = buildPlaytimeRankingData().slice(0, 5);
+  const data = statsCache.playtimeRanking.slice(0, 5);
 
   const tableBox = document.createElement("div");
   tableBox.className = "sc-stats-table-box";
@@ -2629,6 +2640,17 @@ function buildSegaCrewEventStatsTables() {
   return grid;
 }
 
+function buildStatsCache() {
+  statsCache.uniqueGamesRanking = buildUniqueGamesRankingData();
+  statsCache.eventsRanking = buildEventsRankingData();
+  statsCache.timeActiveRanking = buildTimeActiveRankingData();
+  statsCache.totalRunsRanking = buildTotalRunsRankingData();
+  statsCache.mostRacesRanking = buildMostRacesRankingData();
+  statsCache.raceWinsRanking = buildMostRaceWinsRankingData();
+  statsCache.playtimeRanking = buildPlaytimeRankingData();
+  statsCache.activeMembersByYear = buildActiveMembersByYearData();
+}
+
 function loadAllStatsCsvs() {
   resultsWrap.innerHTML = "";
 
@@ -2651,6 +2673,8 @@ Promise.all([
 
   await preloadAllVideoDurations();
   await loadTwitchChannelStats();
+  
+  buildStatsCache();
 
   renderStatsPanel();
 }).catch(err => {
