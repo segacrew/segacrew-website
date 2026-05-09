@@ -274,6 +274,54 @@ function formatSecondsAsTime(totalSeconds) {
   return `${hours}:${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
 }
 
+function calculateCurrentActiveMembers() {
+  const activeMembers = new Set();
+
+  const today = new Date();
+  const oneYearAgo = new Date(today);
+  oneYearAgo.setFullYear(today.getFullYear() - 1);
+
+  function addRunnersIfRecent(dateValue, runnerNames) {
+    const date = parseEventDate(dateValue);
+
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) return;
+    if (date < oneYearAgo || date > today) return;
+
+    runnerNames.forEach(name => {
+      const cleanName = normalizeName(name);
+      if (cleanName) {
+        activeMembers.add(normalizeHandle(cleanName));
+      }
+    });
+  }
+
+  // Main database
+  databaseRows.forEach(row => {
+    addRunnersIfRecent(
+      row.DATE,
+      getNamesFromColumns(row, "RUNNER", 25)
+    );
+  });
+
+  // Free For All database
+  freeForAllRows.forEach(row => {
+    addRunnersIfRecent(
+      row.DATE,
+      getNamesFromColumns(row, "RUNNER", 25)
+    );
+  });
+
+  // Races database
+  raceData.forEach(race => {
+    addRunnersIfRecent(
+      race.date,
+      race.runners.map(runner => runner.name)
+    );
+  });
+
+  return activeMembers.size;
+}
+
 function buildPlaytimeRankingData() {
   const members = getUniqueMemberNames();
 
@@ -959,6 +1007,49 @@ function getActiveDateRangeForRunner(memberName) {
   };
 }
 
+function calculateTotalBroadcastSeconds() {
+  const videoIds = new Set();
+
+  // Main database only
+  databaseRows.forEach(row => {
+    const id1 = extractYouTubeId(row.VIDEOURL);
+    const id2 = extractYouTubeId(row.VIDEOURL2);
+
+    if (id1) videoIds.add(id1);
+    if (id2) videoIds.add(id2);
+  });
+
+  // Races database only
+  raceData.forEach(race => {
+    const raceId = extractYouTubeId(race.videoUrl);
+    if (raceId) videoIds.add(raceId);
+  });
+
+  let totalSeconds = 0;
+
+  videoIds.forEach(id => {
+    const seconds = videoDurationMap.get(id);
+
+    if (typeof seconds === "number") {
+      totalSeconds += seconds;
+    }
+  });
+
+  return totalSeconds;
+}
+
+function formatBroadcastTime(totalSeconds) {
+  const seconds = Math.max(0, Math.floor(totalSeconds));
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+
+  if (hours > 0) {
+    return `${hours.toLocaleString()}h ${String(minutes).padStart(2, "0")}m`;
+  }
+
+  return `${minutes}m`;
+}
+
 function buildMostPlayedGamesForConsoleRankingData(consoleName) {
   const selectedConsole = normalizeConsoleForMatch(consoleName);
   const gameCounts = new Map();
@@ -1140,6 +1231,55 @@ function formatDateText(dateStr) {
   });
 }
 
+function formatChannelAge(createdAt) {
+  const startDate = createdAt
+    ? new Date(createdAt)
+    : new Date(2019, 3, 30); // April 30, 2019
+
+  const today = new Date();
+
+  if (!(startDate instanceof Date) || Number.isNaN(startDate.getTime())) {
+    return "—";
+  }
+
+  let years = today.getFullYear() - startDate.getFullYear();
+  let months = today.getMonth() - startDate.getMonth();
+  let days = today.getDate() - startDate.getDate();
+
+  if (days < 0) {
+    months--;
+
+    const previousMonthLastDay = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      0
+    ).getDate();
+
+    days += previousMonthLastDay;
+  }
+
+  if (months < 0) {
+    years--;
+    months += 12;
+  }
+
+  const parts = [];
+
+  if (years > 0) {
+    parts.push(`${years} ${years === 1 ? "year" : "years"}`);
+  }
+
+  if (months > 0) {
+    parts.push(`${months} ${months === 1 ? "month" : "months"}`);
+  }
+
+  if (days > 0 || !parts.length) {
+    parts.push(`${days} ${days === 1 ? "day" : "days"}`);
+  }
+
+  return parts.join(", ");
+}
+
 function buildTwitchStatCard(label, value, subtext = "") {
   const card = document.createElement("div");
   card.className = "sc-twitch-stat-card";
@@ -1192,12 +1332,15 @@ function buildSegaCrewTwitchStatsPanel() {
     )
   );
 
-  statGrid.appendChild(
-    buildTwitchStatCard(
-      "Channel Views",
-      formatNumber(channel.viewCount)
-    )
-  );
+  const totalBroadcastSeconds = calculateTotalBroadcastSeconds();
+
+statGrid.appendChild(
+  buildTwitchStatCard(
+    "Total Broadcast Time",
+    formatBroadcastTime(totalBroadcastSeconds),
+    "Main events + races"
+  )
+);
 
   statGrid.appendChild(
     buildTwitchStatCard(
@@ -1215,18 +1358,22 @@ function buildSegaCrewTwitchStatsPanel() {
   );
 
   statGrid.appendChild(
-    buildTwitchStatCard(
-      "Current Category",
-      channel.currentGame || "—"
-    )
-  );
+  buildTwitchStatCard(
+    "Current Active Members",
+    formatNumber(calculateCurrentActiveMembers()),
+    "Appeared in the past year"
+  )
+);
 
-  statGrid.appendChild(
-    buildTwitchStatCard(
-  "Recent Clips",
-  formatNumber(clips.length)
-)
-  );
+
+statGrid.appendChild(
+  buildTwitchStatCard(
+    "Channel Age",
+    formatChannelAge(channel.createdAt),
+    "Since April 30, 2019"
+  )
+);
+
 
   wrap.appendChild(header);
   wrap.appendChild(statGrid);
@@ -1241,7 +1388,7 @@ function buildRecentTwitchClipsTable(clips) {
 
   const title = document.createElement("div");
   title.className = "sc-stats-table-title";
-  title.textContent = "RECENT TWITCH CLIPS";
+  title.textContent = "TOP TWITCH CLIPS";
 
   const table = document.createElement("table");
   table.className = "sc-stats-table";
