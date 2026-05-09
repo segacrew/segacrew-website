@@ -1338,7 +1338,6 @@ statGrid.appendChild(
   buildTwitchStatCard(
     "Total Broadcast Time",
     formatBroadcastTime(totalBroadcastSeconds),
-    "Main events + races"
   )
 );
 
@@ -1361,7 +1360,6 @@ statGrid.appendChild(
   buildTwitchStatCard(
     "Current Active Members",
     formatNumber(calculateCurrentActiveMembers()),
-    "Appeared in the past year"
   )
 );
 
@@ -1370,13 +1368,12 @@ statGrid.appendChild(
   buildTwitchStatCard(
     "Channel Age",
     formatChannelAge(channel.createdAt),
-    "Since April 30, 2019"
   )
 );
 
-
   wrap.appendChild(header);
   wrap.appendChild(statGrid);
+  wrap.appendChild(buildSegaCrewEventStatsTables());
   wrap.appendChild(buildRecentTwitchClipsTable(clips));
 
   return wrap;
@@ -1437,6 +1434,89 @@ function buildRecentTwitchClipsTable(clips) {
   tableBox.appendChild(table);
 
   return tableBox;
+}
+
+function buildSegaCrewEventStatsData() {
+  const eventStats = new Map();
+
+  function getOrCreateEvent(source, eventId, eventName) {
+    const cleanEventName = normalizeName(eventName);
+    const cleanEventId = normalizeName(eventId);
+
+    if (!cleanEventName && !cleanEventId) return null;
+
+    const key = cleanEventId
+      ? `${source}-eventid-${cleanEventId}`
+      : `${source}-event-${normalizeKey(cleanEventName)}`;
+
+    if (!eventStats.has(key)) {
+      eventStats.set(key, {
+        key,
+        name: cleanEventName || cleanEventId,
+        runners: new Set(),
+        games: 0,
+        videoIds: new Set()
+      });
+    }
+
+    return eventStats.get(key);
+  }
+
+  // Main database
+  databaseRows.forEach(row => {
+    const event = getOrCreateEvent("main", row.EVENTID, row.EVENT);
+    if (!event) return;
+
+    getNamesFromColumns(row, "RUNNER", 25).forEach(runner => {
+      const cleanRunner = normalizeHandle(runner);
+      if (cleanRunner) event.runners.add(cleanRunner);
+    });
+
+    if (normalizeName(row.GAME)) {
+      event.games++;
+    }
+
+    const id1 = extractYouTubeId(row.VIDEOURL);
+    const id2 = extractYouTubeId(row.VIDEOURL2);
+
+    if (id1) event.videoIds.add(id1);
+    if (id2) event.videoIds.add(id2);
+  });
+
+  // Races database
+  raceData.forEach(race => {
+    const event = getOrCreateEvent("race", race.eventId, race.eventName);
+    if (!event) return;
+
+    race.runners.forEach(runner => {
+      const cleanRunner = normalizeHandle(runner.name);
+      if (cleanRunner) event.runners.add(cleanRunner);
+    });
+
+    event.games += race.games.length;
+
+    const raceId = extractYouTubeId(race.videoUrl);
+    if (raceId) event.videoIds.add(raceId);
+  });
+
+  return [...eventStats.values()].map(event => {
+    let totalSeconds = 0;
+
+    event.videoIds.forEach(id => {
+      const seconds = videoDurationMap.get(id);
+      if (typeof seconds === "number") {
+        totalSeconds += seconds;
+      }
+    });
+
+    return {
+      name: event.name,
+      runnerCount: event.runners.size,
+      gameCount: event.games,
+      totalSeconds,
+      totalTimeDisplay: formatBroadcastTime(totalSeconds)
+    };
+  });
 }
 
 function isShinobiMonthlyRace(race) {
@@ -2436,6 +2516,117 @@ function buildConsoleLibraryTables(consoleName) {
   );
 
   return tablesWrap;
+}
+
+function buildTopEventsByRunnersTable() {
+  const data = buildSegaCrewEventStatsData()
+    .filter(item => item.runnerCount > 0)
+    .sort((a, b) => {
+      if (b.runnerCount !== a.runnerCount) return b.runnerCount - a.runnerCount;
+      return a.name.localeCompare(b.name);
+    })
+    .slice(0, 5);
+
+  return buildSegaCrewEventStatsTable(
+    "TOP EVENTS BY RUNNERS",
+    "RUNNERS",
+    data,
+    item => item.runnerCount
+  );
+}
+
+function buildTopEventsByGamesTable() {
+  const data = buildSegaCrewEventStatsData()
+    .filter(item => item.gameCount > 0)
+    .sort((a, b) => {
+      if (b.gameCount !== a.gameCount) return b.gameCount - a.gameCount;
+      return a.name.localeCompare(b.name);
+    })
+    .slice(0, 5);
+
+  return buildSegaCrewEventStatsTable(
+    "TOP EVENTS BY GAMES",
+    "GAMES",
+    data,
+    item => item.gameCount
+  );
+}
+
+function buildLongestEventsTable() {
+  const data = buildSegaCrewEventStatsData()
+    .filter(item => item.totalSeconds > 0)
+    .sort((a, b) => {
+      if (b.totalSeconds !== a.totalSeconds) return b.totalSeconds - a.totalSeconds;
+      return a.name.localeCompare(b.name);
+    })
+    .slice(0, 5);
+
+  return buildSegaCrewEventStatsTable(
+    "LONGEST EVENTS",
+    "TIME",
+    data,
+    item => item.totalTimeDisplay
+  );
+}
+
+function buildSegaCrewEventStatsTable(titleText, valueHeader, data, getValue) {
+  const tableBox = document.createElement("div");
+  tableBox.className = "sc-stats-table-box sc-sega-crew-event-table-box";
+
+  const title = document.createElement("div");
+  title.className = "sc-stats-table-title";
+  title.textContent = titleText;
+
+  const table = document.createElement("table");
+  table.className = "sc-stats-table sc-sega-crew-event-table";
+
+  const thead = document.createElement("thead");
+  thead.innerHTML = `
+    <tr>
+      <th></th>
+      <th>EVENT</th>
+      <th>${escapeHtml(valueHeader)}</th>
+    </tr>
+  `;
+
+  const tbody = document.createElement("tbody");
+
+  if (!data.length) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td colspan="3">No event data found.</td>`;
+    tbody.appendChild(tr);
+  } else {
+    data.forEach((item, index) => {
+      const tr = document.createElement("tr");
+
+      tr.innerHTML = `
+        <td>${index + 1}</td>
+        <td>${escapeHtml(item.name)}</td>
+        <td>${escapeHtml(getValue(item))}</td>
+      `;
+
+      tbody.appendChild(tr);
+    });
+  }
+
+  table.appendChild(thead);
+  table.appendChild(tbody);
+
+  tableBox.appendChild(title);
+  tableBox.appendChild(table);
+
+  return tableBox;
+}
+
+function buildSegaCrewEventStatsTables() {
+  const grid = document.createElement("div");
+  grid.className = "sc-stats-table-grid sc-sega-crew-event-stats-grid";
+
+  grid.appendChild(buildTopEventsByRunnersTable());
+  grid.appendChild(buildTopEventsByGamesTable());
+  grid.appendChild(buildLongestEventsTable());
+
+  return grid;
 }
 
 function loadAllStatsCsvs() {
