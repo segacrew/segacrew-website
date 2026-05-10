@@ -1,4 +1,4 @@
-EVENTID,RUNID,DATE,EVENT,RACETITLE,VIDEOURL,GAME,CONSOLE,RUNNER1,RUNNER2,RUNNER3,RUNNER4,RUNNER5,RUNNER6,RUNNER7,RUNNER8,RUNNER9,RUNNER10,RUNNER11,RUNNER12,RUNNER13,RUNNER14,RUNNER15,RUNNER16,COMMENTARY1,COMMENTARY2,COMMENTARY3,COMMENTARY4
+EVENTID,RUNID,DATE,EVENT,RACETITLE,VIDEOURL,GAMES,CONSOLE,RUNNER1,RUNNER2,RUNNER3,RUNNER4,RUNNER5,RUNNER6,RUNNER7,RUNNER8,RUNNER9,RUNNER10,RUNNER11,RUNNER12,RUNNER13,RUNNER14,RUNNER15,RUNNER16,COMMENTARY1,COMMENTARY2,COMMENTARY3,COMMENTARY4
 2,184,8/17/2019,Sega Week,The Sonic 1 Race,https://www.youtube.com/watch?v=oGdD9AQ0M28,Sonic the Hedgehog,Genesis,Faust4712,NoDiggity1,Shimegabriel,z_tox,Corova83,,,,,,,,,,,,Shannaberryblast,,,
 ,,,,,,Sonic the Hedgehog 2,Genesis,NoDiggity1,,,,,,,,,,,,,,,,,,,
 ,,,,,,Shinobi III: Return of the Ninja Master,Genesis,Faust4712,,,,,,,,,,,,,,,,,,,
@@ -91,14 +91,14 @@ EVENTID,RUNID,DATE,EVENT,RACETITLE,VIDEOURL,GAME,CONSOLE,RUNNER1,RUNNER2,RUNNER3
 ,,,,,,OutRun,Master System,Grimshins,,,,,,,,,,,,,,,,,,,
 ,,,,,,MegaRace,Sega CD,NoDiggity1,,,,,,,,,,,,,,,,,,,
 ,,,,,,Skitchin',Genesis,Gok_Zarah,,,,,,,,,,,,,,,,,,,
-14,73,5/29/2022,Segathon IV,The Sonic 1 Race,https://www.youtube.com/watch?v=m5pYlLiVh5M,Sonic the Hedgehog,Genesis,NoDiggity1,BaconOmelette,Faust4712,Gok_Zarah,ZeeGee_,Grimshins,Paulsaltine,Sauloandrade,FedePG,,,,,,,,,,,
+14,73,5/29/2022,Segathon IV,The Sonic 1 Race,https://www.youtube.com/watch?v=m5pYlLiVh5M,Sonic the Hedgehog,Genesis,NoDiggity1,BaconOmelette,Faust4712,Gok_Zarah,ZeeGee_,Grimshins,Paulsaltine,Sauloandrade_,FedePG,,,,,,,,,,,
 ,,,,,,Haunting Starring Polterguy,Genesis,Paulsaltine,Gok_Zarah,,,,,,,,,,,,,,,,,,
 ,,,,,,Road Rash 3: Tour De Force,Genesis,Gok_Zarah,,,,,,,,,,,,,,,,,,,
 ,,,,,,Sonic 3 & Knuckles,Genesis,ZeeGee_,,,,,,,,,,,,,,,,,,,
 ,,,,,,Sonic the Hedgehog,Master System,Grimshins,,,,,,,,,,,,,,,,,,,
 ,,,,,,Barney's Hide & Seek Game,Genesis,BaconOmelette,,,,,,,,,,,,,,,,,,,
 ,,,,,,Sonic Spinball,Genesis,NoDiggity1,,,,,,,,,,,,,,,,,,,
-,,,,,,Sonic the Hedgehog,Commodore 64,Sauloandrade,,,,,,,,,,,,,,,,,,,
+,,,,,,Sonic the Hedgehog,Commodore 64,Sauloandrade_,,,,,,,,,,,,,,,,,,,
 ,,,,,,Skitchin',Genesis,Gok_Zarah,,,,,,,,,,,,,,,,,,,
 21,70,6/11/2023,Segathon V,The ToeJam & Earl Race,https://www.youtube.com/watch?v=Hd-pneN_tks,ToeJam & Earl,Genesis,hoodytwoshoes,BaconOmelette,Grimshins,NoDiggity1,bitty6501,Cypherin,Aludrakijurorin,KrakenZer0,,,,,,,,,Boostershane,,,
 ,,,,,,Golden Axe,Genesis,NoDiggity1,,,,,,,,,,,,,,,,,,,

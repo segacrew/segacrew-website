@@ -27,8 +27,7 @@ document.addEventListener("DOMContentLoaded", () => {
   "Golden Axe Trilogy": [
     "Golden Axe",
     "Golden Axe II",
-    "Golden Axe III",
-    "Golden Axe 3"
+    "Golden Axe III"
   ],
   "Bare Knuckle Trilogy": [
     "Bare Knuckle",
@@ -44,6 +43,21 @@ document.addEventListener("DOMContentLoaded", () => {
     "The Revenge of Shinobi",
     "Shadow Dancer: The Secret of Shinobi",
     "Shinobi III: Return of the Ninja Master"
+  ],
+  "Shinobi Relay": [
+    "The Revenge of Shinobi",
+    "Shadow Dancer: The Secret of Shinobi",
+    "Shinobi III: Return of the Ninja Master"
+  ],
+  "Shinobi Shuffler": [
+    "The Revenge of Shinobi",
+    "Shadow Dancer: The Secret of Shinobi",
+    "Shinobi III: Return of the Ninja Master"
+  ],
+  "The Acclaim Shit-Fecta": [
+    "Spider-Man",
+    "Wolverine: Adamantium Rage",
+    "Batman Forever"
   ],
   "Ecco Trilogy": [
     "Ecco the Dolphin",
@@ -518,6 +532,7 @@ function getConsoleForRaceEvent(eventName) {
   if (cleanEvent.includes("5g game gear")) return "Game Gear";
   if (cleanEvent.includes("saturn8lia")) return "Saturn";
   if (cleanEvent.includes("shinobi")) return "Genesis";
+  if (cleanEvent.includes("sega world championships")) return "Genesis";
 
   return "";
 }
