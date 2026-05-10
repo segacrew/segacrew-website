@@ -2843,8 +2843,6 @@ Promise.all([
   await loadTwitchChannelStats();
   
   buildStatsCache();
-  
-  debugShinobiIIIConsoleCounts();
 
   renderStatsPanel();
 }).catch(err => {
