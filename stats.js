@@ -70,6 +70,83 @@ const CSV_URLS = {
     : "https://stupendous-paletas-199024.netlify.app/GAME LIBRARY - MASTER.csv"
 };
 
+const TRILOGY_MAP = {
+  "Golden Axe Trilogy": [
+    "Golden Axe",
+    "Golden Axe II",
+    "Golden Axe III"
+  ],
+  "Bare Knuckle Trilogy": [
+    "Bare Knuckle",
+    "Bare Knuckle 2",
+    "Bare Knuckle 3"
+  ],
+  "Shinobi Trilogy Shuffler": [
+    "The Revenge of Shinobi",
+    "Shadow Dancer: The Secret of Shinobi",
+    "Shinobi III: Return of the Ninja Master"
+  ],
+  "Shinobi Trilogy": [
+    "The Revenge of Shinobi",
+    "Shadow Dancer: The Secret of Shinobi",
+    "Shinobi III: Return of the Ninja Master"
+  ],
+  "Shinobi Relay": [
+    "The Revenge of Shinobi",
+    "Shadow Dancer: The Secret of Shinobi",
+    "Shinobi III: Return of the Ninja Master"
+  ],
+  "Shinobi Shuffler": [
+    "The Revenge of Shinobi",
+    "Shadow Dancer: The Secret of Shinobi",
+    "Shinobi III: Return of the Ninja Master"
+  ],
+  "The Acclaim Shit-Fecta": [
+    "Spider-Man",
+    "Wolverine: Adamantium Rage",
+    "Batman Forever"
+  ],
+  "Ecco Trilogy": [
+    "Ecco the Dolphin",
+    "Ecco: The Tides of Time",
+    "Ecco Jr."
+  ],
+  "Alex Kidd in Miracle World Trilogy Shuffler": [
+    "Alex Kidd in Miracle World",
+    "Alex Kidd 3: Curse in Miracle World",
+    "Alex Kidd in Miracle World 2"
+  ],
+  "Sonic Rush Trilogy": [
+    "Sonic Rush",
+    "Sonic Rush Adventure",
+    "Sonic Colors"
+  ],
+  "Classic Sonic Trilogy": [
+    "Sonic the Hedgehog",
+    "Sonic the Hedgehog 2",
+    "Sonic 3 & Knuckles"
+  ],
+  "Valis Trilogy": [
+    "Valis: The Fantasm Soldier",
+    "Syd of Valis",
+    "Valis III"
+  ]
+};
+
+const TRILOGY_CONSOLE_MAP = {
+  "Golden Axe Trilogy": "Genesis",
+  "Bare Knuckle Trilogy": "Mega Drive",
+  "Shinobi Trilogy Shuffler": "Genesis",
+  "Shinobi Trilogy": "Genesis",
+  "Shinobi Relay": "Genesis",
+  "Shinobi Shuffler": "Genesis",
+  "The Acclaim Shit-Fecta": "Genesis",
+  "Ecco Trilogy": "Genesis",
+  "Alex Kidd in Miracle World Trilogy Shuffler": "Master System",
+  "Classic Sonic Trilogy": "Genesis",
+  "Valis Trilogy": "Genesis"
+};
+
 function loadCsv(url) {
   return new Promise((resolve, reject) => {
     Papa.parse(url, {
@@ -148,6 +225,109 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
+
+function getExpandedGameNames(gameName) {
+  const cleanGame = normalizeName(gameName);
+  if (!cleanGame) return [];
+
+  return TRILOGY_MAP[cleanGame] || [cleanGame];
+}
+
+function addExpandedGamesToCountMap(gameCounts, gameName, count = 1) {
+  getExpandedGameNames(gameName).forEach(game => {
+    const cleanGame = normalizeName(game);
+    if (!cleanGame) return;
+
+    const gameKey = normalizeKey(cleanGame);
+
+    if (!gameCounts.has(gameKey)) {
+      gameCounts.set(gameKey, {
+        name: cleanGame,
+        value: 0
+      });
+    }
+
+    gameCounts.get(gameKey).value += count;
+  });
+}
+
+function addExpandedGamesToSet(gameSet, gameName) {
+  getExpandedGameNames(gameName).forEach(game => {
+    const cleanGame = normalizeName(game);
+    if (cleanGame) {
+      gameSet.add(normalizeKey(cleanGame));
+    }
+  });
+}
+
+function addExpandedGameRunner(gameRunnerMap, gameName, runnerName) {
+  const runner = normalizeName(runnerName);
+  if (!runner) return;
+
+  getExpandedGameNames(gameName).forEach(game => {
+    const cleanGame = normalizeName(game);
+    if (!cleanGame) return;
+
+    const gameKey = normalizeKey(cleanGame);
+    const runnerKey = normalizeHandle(runner);
+
+    if (!gameRunnerMap.has(gameKey)) {
+      gameRunnerMap.set(gameKey, {
+        name: cleanGame,
+        runners: new Set()
+      });
+    }
+
+    gameRunnerMap.get(gameKey).runners.add(runnerKey);
+  });
+}
+
+function getEffectiveConsoleForGameRow(row) {
+  const game = normalizeName(row.GAME);
+
+  if (TRILOGY_CONSOLE_MAP[game]) {
+    return TRILOGY_CONSOLE_MAP[game];
+  }
+
+  return normalizeName(row.CONSOLE);
+}
+
+function buildExpandedFreeForAllRows(rows) {
+  let currentContext = {
+    EVENTID: "",
+    RUNID: "",
+    DATE: "",
+    EVENT: "",
+    RACETITLE: "",
+    VIDEOURL: ""
+  };
+
+  return rows.map(row => {
+    const eventId = normalizeName(row.EVENTID);
+    const runId = normalizeName(row.RUNID);
+    const date = normalizeName(row.DATE);
+    const event = normalizeName(row.EVENT);
+    const raceTitle = normalizeName(row.RACETITLE);
+    const videoUrl = normalizeName(row.VIDEOURL);
+
+    if (eventId) currentContext.EVENTID = eventId;
+    if (runId) currentContext.RUNID = runId;
+    if (date) currentContext.DATE = date;
+    if (event) currentContext.EVENT = event;
+    if (raceTitle) currentContext.RACETITLE = raceTitle;
+    if (videoUrl) currentContext.VIDEOURL = videoUrl;
+
+    return {
+      ...row,
+      EVENTID: eventId || currentContext.EVENTID,
+      RUNID: runId || currentContext.RUNID,
+      DATE: date || currentContext.DATE,
+      EVENT: event || currentContext.EVENT,
+      RACETITLE: raceTitle || currentContext.RACETITLE,
+      VIDEOURL: videoUrl || currentContext.VIDEOURL
+    };
+  });
 }
 
 function buildTwitchLinkHtml(name) {
@@ -604,43 +784,52 @@ function renderTopRunsPieChart(canvas) {
 function buildMostPlayedGamesRankingData() {
   const gameCounts = new Map();
 
-  function addGame(gameName) {
-    const game = normalizeName(gameName);
-    if (!game) return;
+  function addGame(gameName, consoleName) {
+    const cleanConsole = normalizeName(consoleName);
+    if (!cleanConsole) return;
 
-    const gameKey = normalizeKey(game);
+    getExpandedGameNames(gameName).forEach(game => {
+      const cleanGame = normalizeName(game);
+      if (!cleanGame) return;
 
-    if (!gameCounts.has(gameKey)) {
-      gameCounts.set(gameKey, {
-        name: game,
-        value: 0
-      });
-    }
+      const gameKey = `${normalizeKey(cleanGame)}__${normalizeConsoleForMatch(cleanConsole)}`;
 
-    gameCounts.get(gameKey).value++;
+      if (!gameCounts.has(gameKey)) {
+        gameCounts.set(gameKey, {
+          name: cleanGame,
+          console: cleanConsole,
+          value: 0
+        });
+      }
+
+      gameCounts.get(gameKey).value++;
+    });
   }
 
   // Main database
   databaseRows.forEach(row => {
-    addGame(row.GAME);
+    addGame(row.GAME, getEffectiveConsoleForGameRow(row));
   });
 
   // Free For All database
   freeForAllRows.forEach(row => {
-    addGame(row.GAME);
+    addGame(row.GAME, getEffectiveConsoleForGameRow(row));
   });
 
   // Races database
   raceData.forEach(race => {
+    const raceConsole = getConsoleForRace(race);
+
     race.games.forEach(game => {
-      addGame(game);
+      addGame(game, raceConsole);
     });
   });
 
   return [...gameCounts.values()]
     .sort((a, b) => {
       if (b.value !== a.value) return b.value - a.value;
-      return a.name.localeCompare(b.name);
+      if (a.name !== b.name) return a.name.localeCompare(b.name);
+      return a.console.localeCompare(b.console);
     });
 }
 
@@ -648,23 +837,8 @@ function buildGamesByUniqueRunnersRankingData() {
   const gameRunnerMap = new Map();
 
   function addGameRunner(gameName, runnerName) {
-    const game = normalizeName(gameName);
-    const runner = normalizeName(runnerName);
-
-    if (!game || !runner) return;
-
-    const gameKey = normalizeKey(game);
-    const runnerKey = normalizeHandle(runner);
-
-    if (!gameRunnerMap.has(gameKey)) {
-      gameRunnerMap.set(gameKey, {
-        name: game,
-        runners: new Set()
-      });
-    }
-
-    gameRunnerMap.get(gameKey).runners.add(runnerKey);
-  }
+  addExpandedGameRunner(gameRunnerMap, gameName, runnerName);
+}
 
   // Main database
   databaseRows.forEach(row => {
@@ -749,23 +923,20 @@ function buildUniqueGamesRankingData() {
     databaseRows.forEach(row => {
       if (!rowIncludesRunner(row, name, 25)) return;
 
-      const game = normalizeName(row.GAME);
-      if (game) games.add(normalizeKey(game));
+      addExpandedGamesToSet(games, row.GAME);
     });
 
     // Free For All database
     freeForAllRows.forEach(row => {
       if (!rowIncludesRunner(row, name, 25)) return;
 
-      const game = normalizeName(row.GAME);
-      if (game) games.add(normalizeKey(game));
+     addExpandedGamesToSet(games, row.GAME);
     });
 
     // Races database
     getRacesForRunner(name).forEach(race => {
       race.games.forEach(game => {
-        const cleanGame = normalizeName(game);
-        if (cleanGame) games.add(normalizeKey(cleanGame));
+        addExpandedGamesToSet(games, game);
       });
     });
 
@@ -1066,32 +1237,20 @@ function buildMostPlayedGamesForConsoleRankingData(consoleName) {
   const gameCounts = new Map();
 
   function addGame(gameName) {
-    const game = normalizeName(gameName);
-    if (!game) return;
-
-    const gameKey = normalizeKey(game);
-
-    if (!gameCounts.has(gameKey)) {
-      gameCounts.set(gameKey, {
-        name: game,
-        value: 0
-      });
-    }
-
-    gameCounts.get(gameKey).value++;
-  }
+  addExpandedGamesToCountMap(gameCounts, gameName);
+}
 
   // Main database
-  databaseRows.forEach(row => {
-    if (normalizeConsoleForMatch(row.CONSOLE) !== selectedConsole) return;
-    addGame(row.GAME);
-  });
+databaseRows.forEach(row => {
+  if (normalizeConsoleForMatch(getEffectiveConsoleForGameRow(row)) !== selectedConsole) return;
+  addGame(row.GAME);
+});
 
-  // Free For All database
-  freeForAllRows.forEach(row => {
-    if (normalizeConsoleForMatch(row.CONSOLE) !== selectedConsole) return;
-    addGame(row.GAME);
-  });
+// Free For All database
+freeForAllRows.forEach(row => {
+  if (normalizeConsoleForMatch(getEffectiveConsoleForGameRow(row)) !== selectedConsole) return;
+  addGame(row.GAME);
+});
 
   // Races database
   raceData.forEach(race => {
@@ -1129,6 +1288,13 @@ function normalizeConsoleForMatch(value) {
   return clean;
 }
 
+function calculateTotalRuns() {
+  const mainDatabaseRuns = databaseRows.length;
+  const raceDatabaseRuns = raceData.length;
+
+  return mainDatabaseRuns + raceDatabaseRuns;
+}
+
 function getLibraryGamesForConsole(consoleName) {
   const games = [];
 
@@ -1163,20 +1329,24 @@ function buildConsoleLibraryCoverageData(consoleName) {
   databaseRows.forEach(row => {
     if (normalizeConsoleForMatch(row.CONSOLE) !== selectedConsole) return;
 
-    const gameKey = normalizeGameForLibraryMatch(row.GAME);
-    if (gameKey && libraryMap.has(gameKey)) {
-      mainShowcased.add(gameKey);
-    }
+    getExpandedGameNames(row.GAME).forEach(game => {
+  const gameKey = normalizeGameForLibraryMatch(game);
+  if (gameKey && libraryMap.has(gameKey)) {
+    mainShowcased.add(gameKey);
+  }
+});
   });
 
   // Free For All = race / special event showcase
   freeForAllRows.forEach(row => {
     if (normalizeConsoleForMatch(row.CONSOLE) !== selectedConsole) return;
 
-    const gameKey = normalizeGameForLibraryMatch(row.GAME);
-    if (gameKey && libraryMap.has(gameKey) && !mainShowcased.has(gameKey)) {
-      otherShowcased.add(gameKey);
-    }
+    getExpandedGameNames(row.GAME).forEach(game => {
+  const gameKey = normalizeGameForLibraryMatch(game);
+  if (gameKey && libraryMap.has(gameKey) && !mainShowcased.has(gameKey)) {
+    otherShowcased.add(gameKey);
+  }
+});
   });
 
   // Races = race / special event showcase
@@ -1184,10 +1354,12 @@ function buildConsoleLibraryCoverageData(consoleName) {
     if (normalizeConsoleForMatch(getConsoleForRace(race)) !== selectedConsole) return;
 
     race.games.forEach(game => {
-      const gameKey = normalizeGameForLibraryMatch(game);
-      if (gameKey && libraryMap.has(gameKey) && !mainShowcased.has(gameKey)) {
-        otherShowcased.add(gameKey);
-      }
+      getExpandedGameNames(game).forEach(expandedGame => {
+  const gameKey = normalizeGameForLibraryMatch(expandedGame);
+  if (gameKey && libraryMap.has(gameKey) && !mainShowcased.has(gameKey)) {
+    otherShowcased.add(gameKey);
+  }
+});
     });
   });
 
@@ -1360,12 +1532,11 @@ statGrid.appendChild(
   );
 
   statGrid.appendChild(
-    buildTwitchStatCard(
-      "Live Status",
-      live.isLive ? "LIVE" : "Offline",
-      live.isLive ? `${live.viewerCount || 0} viewers` : ""
-    )
-  );
+  buildTwitchStatCard(
+    "Total Runs",
+    formatNumber(calculateTotalRuns())
+  )
+);
 
   statGrid.appendChild(
   buildTwitchStatCard(
@@ -1483,9 +1654,7 @@ function buildSegaCrewEventStatsData() {
       if (cleanRunner) event.runners.add(cleanRunner);
     });
 
-    if (normalizeName(row.GAME)) {
-      event.games++;
-    }
+    event.games += getExpandedGameNames(row.GAME).length;
 
     const id1 = extractYouTubeId(row.VIDEOURL);
     const id2 = extractYouTubeId(row.VIDEOURL2);
@@ -1504,7 +1673,9 @@ function buildSegaCrewEventStatsData() {
       if (cleanRunner) event.runners.add(cleanRunner);
     });
 
-    event.games += race.games.length;
+    event.games += race.games.reduce((sum, game) => {
+  return sum + getExpandedGameNames(game).length;
+}, 0);
 
     const raceId = extractYouTubeId(race.videoUrl);
     if (raceId) event.videoIds.add(raceId);
@@ -2663,7 +2834,7 @@ Promise.all([
   loadCsv(CSV_URLS.gameLibrary)
 ]).then(async ([racesData, freeForAllData, databaseData, gameLibraryData]) => {
   racesRows = racesData;
-  freeForAllRows = freeForAllData;
+  freeForAllRows = buildExpandedFreeForAllRows(freeForAllData);
   databaseRows = databaseData;
   gameLibraryRows = gameLibraryData;
   raceData = buildRaceDatabase(racesRows);
@@ -2672,6 +2843,8 @@ Promise.all([
   await loadTwitchChannelStats();
   
   buildStatsCache();
+  
+  debugShinobiIIIConsoleCounts();
 
   renderStatsPanel();
 }).catch(err => {

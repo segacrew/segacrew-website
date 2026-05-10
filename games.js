@@ -13,7 +13,11 @@ document.addEventListener("DOMContentLoaded", () => {
     
     const RACES_CSV_URL = IS_LOCAL
     ? "SEGA CREW RACES - MASTER.csv"
-    : "https://stupendous-paletas-199024.netlify.app/SEGA CREW RACES - MASTER.csv";  
+    : "https://stupendous-paletas-199024.netlify.app/SEGA CREW RACES - MASTER.csv";
+    
+    const FREE_FOR_ALL_CSV_URL = IS_LOCAL
+    ? "SEGA CREW FREE FOR ALL - MASTER.csv"
+    : "https://stupendous-paletas-199024.netlify.app/SEGA CREW FREE FOR ALL - MASTER.csv";  
 
   let allRows = [];
   let currentGameRunRows = [];
@@ -22,6 +26,8 @@ document.addEventListener("DOMContentLoaded", () => {
   let currentGameOptions = [];
   let raceRows = [];
   let raceData = [];
+  let freeForAllRows = [];
+  let freeForAllExpandedRows = [];
   
   const TRILOGY_MAP = {
   "Golden Axe Trilogy": [
@@ -219,6 +225,46 @@ function getMatchingTrilogyTitles(gameName) {
     .map(([trilogyTitle]) => trilogyTitle);
 }
 
+function buildExpandedFreeForAllRows(rows) {
+  let currentContext = {
+    EVENTID: "",
+    RUNID: "",
+    DATE: "",
+    EVENT: "",
+    RACETITLE: "",
+    VIDEOURL: ""
+  };
+
+  return rows.map(row => {
+    const eventId = normalizeName(row.EVENTID);
+    const runId = normalizeName(row.RUNID);
+    const date = normalizeName(row.DATE);
+    const event = normalizeName(row.EVENT);
+    const raceTitle = normalizeName(row.RACETITLE);
+    const videoUrl = normalizeName(row.VIDEOURL);
+
+    if (eventId) currentContext.EVENTID = eventId;
+    if (runId) currentContext.RUNID = runId;
+    if (date) currentContext.DATE = date;
+    if (event) currentContext.EVENT = event;
+    if (raceTitle) currentContext.RACETITLE = raceTitle;
+    if (videoUrl) currentContext.VIDEOURL = videoUrl;
+
+    return {
+      ...row,
+      EVENTID: normalizeName(row.EVENTID) || currentContext.EVENTID,
+      RUNID: normalizeName(row.RUNID) || currentContext.RUNID,
+      DATE: normalizeName(row.DATE) || currentContext.DATE,
+      EVENT: normalizeName(row.EVENT) || currentContext.EVENT,
+      RACETITLE: normalizeName(row.RACETITLE) || currentContext.RACETITLE,
+      VIDEOURL: normalizeName(row.VIDEOURL) || currentContext.VIDEOURL,
+      RUNTYPE: normalizeName(row.RACETITLE) || currentContext.RACETITLE || "Free For All",
+      SPEEDRUNTYPE: normalizeName(row.SPEEDRUNTYPE),
+      _isFreeForAll: true
+    };
+  });
+}
+
 function parseRaceFinishTime(timeStr) {
   const raw = normalizeName(timeStr);
   if (!raw) return null;
@@ -391,7 +437,7 @@ function getRaceDerivedRowsForGame(selectedOption) {
 }
 
 function getRunnerNames(row) {
-  return getNamesFromColumns(row, "RUNNER", 16);
+  return getNamesFromColumns(row, "RUNNER", 25);
 }
 
 function getRunnerLinksHtml(row) {
@@ -658,7 +704,7 @@ defaultItem.addEventListener("click", () => {
 }
 
 function populateConsoleDropdown() {
-  const consoles = getUniqueConsoles(allRows);
+  const consoles = getUniqueConsoles([...allRows, ...freeForAllExpandedRows]);
 
   consoleItemsWrap.innerHTML = "";
 
@@ -796,7 +842,7 @@ function openRunModal(row) {
   const runnerNames = getRunnerNames(row);
   const runnerLinksHtml = runnerNames.length ? buildTwitchLinksHtml(runnerNames) : "";
 
-  const commentaryNames = getNamesFromColumns(row, "COMMENTARY", 16);
+  const commentaryNames = getNamesFromColumns(row, "COMMENTARY", 25);
   const commentaryLinksHtml = commentaryNames.length ? buildTwitchLinksHtml(commentaryNames) : "";
 
   const embedUrl = getYouTubeEmbedUrl(row.VIDEOURL, row.TIMESTAMP);
@@ -947,6 +993,23 @@ nextBtn.addEventListener("click", () => {
       gameToConsoles.get(game).add(consoleName);
     }
   });
+  
+  freeForAllExpandedRows.forEach(row => {
+  const game = normalizeName(row.GAME);
+  const consoleName = normalizeName(row.CONSOLE);
+
+  if (!game) return;
+  if (isTrilogyTitle(game)) return;
+  if (consoleFilter && consoleName !== consoleFilter) return;
+
+  if (!gameToConsoles.has(game)) {
+    gameToConsoles.set(game, new Set());
+  }
+
+  if (consoleName) {
+    gameToConsoles.get(game).add(consoleName);
+  }
+});
 
   raceData.forEach(race => {
     race.games.forEach(game => {
@@ -1026,6 +1089,33 @@ nextBtn.addEventListener("click", () => {
   }
 }
 
+function getFreeForAllRowsForGame(selectedOption) {
+  const matchingTrilogies = getMatchingTrilogyTitles(selectedOption.game);
+
+  return freeForAllExpandedRows.filter(row => {
+    const rowGame = normalizeName(row.GAME);
+    const rowConsole = normalizeName(row.CONSOLE);
+
+    const matchesBaseGame = rowGame === selectedOption.game;
+    const matchesRelatedTrilogy = matchingTrilogies.includes(rowGame);
+
+    if (!matchesBaseGame && !matchesRelatedTrilogy) {
+      return false;
+    }
+
+    if (selectedOption.console) {
+      return rowConsole === selectedOption.console;
+    }
+
+    return true;
+  }).map(row => ({
+    ...row,
+    RUNTYPE: normalizeName(row.RACETITLE) || "Free For All",
+    SPEEDRUNTYPE: normalizeName(row.SPEEDRUNTYPE),
+    _isFreeForAll: true
+  }));
+}
+
 function getGameRows(selectedOption) {
   const matchingTrilogies = getMatchingTrilogyTitles(selectedOption.game);
 
@@ -1047,9 +1137,9 @@ function getGameRows(selectedOption) {
     return true;
   });
 
+  const freeForAllGameRows = getFreeForAllRowsForGame(selectedOption);
   const raceDerivedRows = getRaceDerivedRowsForGame(selectedOption);
-
-  const combinedRows = [...normalRows, ...raceDerivedRows];
+  const combinedRows = [...normalRows, ...freeForAllGameRows, ...raceDerivedRows];
 
   combinedRows.sort((a, b) => {
     const dateA = normalizeName(a.DATE);
@@ -1063,7 +1153,7 @@ function getGameRows(selectedOption) {
   function getRunnerNamesPlain(row) {
     const names = [];
 
-    for (let i = 1; i <= 16; i++) {
+    for (let i = 1; i <= 25; i++) {
       const runner = normalizeName(row[`RUNNER${i}`]);
       if (runner) names.push(runner);
     }
@@ -1079,7 +1169,7 @@ function buildGameSummary(gameRows) {
     const eventName = normalizeName(row.EVENT);
     if (eventName) eventSet.add(eventName);
 
-    for (let i = 1; i <= 16; i++) {
+    for (let i = 1; i <= 25; i++) {
       const runner = normalizeName(row[`RUNNER${i}`]);
       if (runner) {
         runnerCounts.set(runner, (runnerCounts.get(runner) || 0) + 1);
@@ -1313,28 +1403,39 @@ function buildGameSummary(gameRows) {
 });
 
   Promise.all([
-    new Promise((resolve, reject) => {
-      Papa.parse(CSV_URL, {
-        download: true,
-        header: true,
-        skipEmptyLines: true,
-        complete: results => resolve(results.data || []),
-        error: reject
-      });
-    }),
-    new Promise((resolve, reject) => {
-      Papa.parse(RACES_CSV_URL, {
-        download: true,
-        header: true,
-        skipEmptyLines: true,
-        complete: results => resolve(results.data || []),
-        error: reject
-      });
-    })
-  ]).then(([mainRows, extraRaceRows]) => {
-    allRows = mainRows;
-    raceRows = extraRaceRows;
-    raceData = buildRaceDatabase(raceRows);
+  new Promise((resolve, reject) => {
+    Papa.parse(CSV_URL, {
+      download: true,
+      header: true,
+      skipEmptyLines: true,
+      complete: results => resolve(results.data || []),
+      error: reject
+    });
+  }),
+  new Promise((resolve, reject) => {
+    Papa.parse(RACES_CSV_URL, {
+      download: true,
+      header: true,
+      skipEmptyLines: true,
+      complete: results => resolve(results.data || []),
+      error: reject
+    });
+  }),
+  new Promise((resolve, reject) => {
+    Papa.parse(FREE_FOR_ALL_CSV_URL, {
+      download: true,
+      header: true,
+      skipEmptyLines: true,
+      complete: results => resolve(results.data || []),
+      error: reject
+    });
+  })
+]).then(([mainRows, extraRaceRows, freeForAllData]) => {
+  allRows = mainRows;
+  raceRows = extraRaceRows;
+  freeForAllRows = freeForAllData;
+  freeForAllExpandedRows = buildExpandedFreeForAllRows(freeForAllRows);
+  raceData = buildRaceDatabase(raceRows);
 
     populateConsoleDropdown();
     populateGameDropdown();

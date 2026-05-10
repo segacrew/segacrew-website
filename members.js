@@ -294,6 +294,7 @@ function getFreeForAllGamesForMainRowAndMember(row, memberName) {
 
   freeForAllExpandedRows.forEach(ffaRow => {
     if (getEventRunKey(ffaRow) !== key) return;
+
     if (!rowIncludesRunner(ffaRow, memberName)) return;
 
     const game = normalizeName(ffaRow.GAME);
@@ -2652,15 +2653,15 @@ function renderMemberRunsTable(memberName) {
     const tr = document.createElement("tr");
 
     tr.innerHTML = `
-      <td>
-  <button type="button" class="sc-game-link">${escapeHtml(normalizeName(row.GAME) || "—")}</button>
-  ${buildFreeForAllGamesSubline(row, memberName)}
-</td>
-      <td>${escapeHtml(normalizeName(row.EVENT) || "—")}</td>
-      <td>${escapeHtml(normalizeName(row.DATE) || "—")}</td>
-      <td>${escapeHtml(normalizeName(row.RUNTYPE) || "—")}</td>
-      <td>${escapeHtml(normalizeName(row.SPEEDRUNTYPE) || "—")}</td>
-    `;
+  <td>
+    <button type="button" class="sc-game-link">${escapeHtml(normalizeName(row.GAME) || "—")}</button>
+    ${buildFreeForAllGamesSubline(row, memberName)}
+  </td>
+  <td>${escapeHtml(normalizeName(row.EVENT) || "—")}</td>
+  <td>${escapeHtml(normalizeName(row.DATE) || "—")}</td>
+  <td>${escapeHtml(normalizeName(row.RUNTYPE) || "—")}</td>
+  <td>${escapeHtml(normalizeName(row.SPEEDRUNTYPE) || "—")}</td>
+`;
 
     const gameButton = tr.querySelector(".sc-game-link");
     gameButton.addEventListener("click", () => {
