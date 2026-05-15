@@ -1808,6 +1808,16 @@ function rowIncludesCommentary(row, memberName) {
   return false;
 }
 
+function raceIncludesCommentary(race, memberName) {
+  const target = normalizeHandle(memberName);
+
+  for (let i = 1; i <= 21; i++) {
+    const commentary = normalizeHandle(race.commentary?.[`commentary${i}`]);
+    if (commentary === target) return true;
+  }
+
+  return false;
+}
 
 function getAllRunnerNames(rows) {
   const names = new Set();
@@ -2367,15 +2377,21 @@ function buildRaceDatabase(rows) {
         });
       }
 
-      currentRace = {
-        eventId,
-        key,
-        eventName,
-        date,
-        videoUrl,
-        runners,
-        games: []
-      };
+currentRace = {
+  eventId,
+  key,
+  eventName,
+  date,
+  videoUrl,
+  runners,
+  commentary: Object.fromEntries(
+    Array.from({ length: 21 }, (_, index) => {
+      const i = index + 1;
+      return [`commentary${i}`, normalizeName(row[`COMMENTARY${i}`])];
+    })
+  ),
+  games: []
+};
 
       currentRaceSeenGameKeys = new Set();
     }
@@ -2474,6 +2490,36 @@ function getRacesForRunner(memberName) {
     photoWrap.innerHTML = "";
     photoWrap.appendChild(img);
   }
+}
+
+function getCommentaryRaceRows(memberName) {
+  return raceData
+    .filter(race => raceIncludesCommentary(race, memberName))
+    .map(race => ({
+      GAME: race.eventName,
+      EVENT: race.eventName,
+      DATE: race.date,
+      RUNTYPE: "Race",
+      SPEEDRUNTYPE: "",
+      CONSOLE: getConsoleForRace(race),
+      VIDEOURL: race.videoUrl,
+      VIDEOURL2: "",
+      TIMESTAMP: "",
+      TIMESTAMP2: "",
+      _isRaceDerived: true,
+      _race: race,
+      ...Object.fromEntries(
+        race.runners.flatMap((runner, index) => ([
+          [`RUNNER${index + 1}`, runner.name]
+        ]))
+      ),
+      ...Object.fromEntries(
+        Array.from({ length: 21 }, (_, index) => {
+          const i = index + 1;
+          return [`COMMENTARY${i}`, race.commentary?.[`commentary${i}`] || ""];
+        })
+      )
+    }));
 }
 
 async function renderMemberSummary(memberName) {
@@ -2694,7 +2740,34 @@ function renderMemberRunsTable(memberName) {
 }
 
 function renderMemberCommentaryTable(memberName) {
-  const commentaryRows = allRows.filter(row => rowIncludesCommentary(row, memberName));
+  const mainCommentaryRows = allRows.filter(row =>
+  rowIncludesCommentary(row, memberName)
+);
+
+const freeForAllCommentaryRows = freeForAllExpandedRows
+  .filter(row => rowIncludesCommentary(row, memberName))
+  .map(row => ({
+    ...row,
+    RUNTYPE: normalizeName(row.RACETITLE) || "Free For All",
+    SPEEDRUNTYPE: normalizeName(row.SPEEDRUNTYPE),
+    _isFreeForAll: true
+  }));
+
+const raceCommentaryRows = getCommentaryRaceRows(memberName);
+
+const commentaryRows = [
+  ...mainCommentaryRows,
+  ...freeForAllCommentaryRows,
+  ...raceCommentaryRows
+].sort((a, b) => {
+  const dateA = parseEventDate(a.DATE);
+  const dateB = parseEventDate(b.DATE);
+
+  if (dateA && dateB) return dateA - dateB;
+  if (dateA) return -1;
+  if (dateB) return 1;
+  return 0;
+});
 
   const wrap = document.createElement("div");
   wrap.className = "sc-member-runs-wrap";
