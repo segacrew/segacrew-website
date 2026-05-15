@@ -92,6 +92,19 @@ document.addEventListener("DOMContentLoaded", () => {
   ]
 };
 
+const EXCLUDED_DISPLAY_RUNNERS = new Set([
+  "dr_fatbody",
+  "eighttt",
+  "thiagoch",
+  "rodas13",
+  "rodas13_"
+]);
+
+const RACE_GAME_CONSOLE_OVERRIDES = {
+  "Battle Golfer Yui": "Mega Drive",
+  "Bishoujo Senshi Sailor Moon": "Mega Drive"
+};
+
   const wrapper = document.createElement("div");
   wrapper.className = "sc-page-controls";
 
@@ -217,6 +230,28 @@ const nextBtn = modal.querySelector(".sc-modal-next");
   
   function isTrilogyTitle(gameName) {
   return Object.prototype.hasOwnProperty.call(TRILOGY_MAP, gameName);
+}
+
+function getRaceGameConsoleOverride(gameName) {
+  const cleanGame = normalizeName(gameName);
+
+  return RACE_GAME_CONSOLE_OVERRIDES[cleanGame] || "";
+}
+
+function normalizeHandle(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function rowHasExcludedDisplayRunner(row) {
+  for (let i = 1; i <= 25; i++) {
+    const runner = normalizeHandle(row[`RUNNER${i}`]);
+
+    if (EXCLUDED_DISPLAY_RUNNERS.has(runner)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 function getMatchingTrilogyTitles(gameName) {
@@ -601,6 +636,12 @@ function getKnownConsolesForGame(gameName) {
 }
 
 function inferConsoleForRaceGame(gameName, race) {
+  const overrideConsole = getRaceGameConsoleOverride(gameName);
+
+  if (overrideConsole) {
+    return overrideConsole;
+  }
+
   const knownConsoles = getKnownConsolesForGame(gameName);
   const eventConsole = getConsoleForRaceEvent(race.eventName);
 
@@ -1207,7 +1248,9 @@ function buildGameSummary(gameRows) {
 }
 
   function renderGameRunsTable(selectedOption, gameRows) {
-  currentGameRunRows = gameRows;
+	  
+  const displayRows = gameRows.filter(row => !rowHasExcludedDisplayRunner(row));
+  currentGameRunRows = displayRows;
 
   const wrap = document.createElement("div");
   wrap.className = "sc-game-runs-wrap";
@@ -1239,7 +1282,7 @@ function buildGameSummary(gameRows) {
 
   const tbody = document.createElement("tbody");
 
-  gameRows.forEach((row, index) => {
+  displayRows.forEach((row, index) => {
     const tr = document.createElement("tr");
 
     tr.innerHTML = `

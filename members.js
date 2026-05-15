@@ -58,6 +58,14 @@ const FREE_FOR_ALL_CSV_URL = IS_LOCAL
   "11_1"
 ]);
 
+const EXCLUDED_MEMBER_PAGES = new Set([
+  "dr_fatbody",
+  "eighttt",
+  "thiagoch",
+  "rodas13",
+  "rodas13_"
+]);
+
 const TRILOGY_MAP = {
   "Golden Axe Trilogy": [
     "Golden Axe",
@@ -242,6 +250,10 @@ function scrollMemberMatchIntoView(query) {
     return String(value || "").trim().toLowerCase();
   }
   
+function isExcludedMemberPage(name) {
+  return EXCLUDED_MEMBER_PAGES.has(normalizeHandle(name));
+}  
+  
 function getExpandedGameNames(gameName) {
   const cleanGame = normalizeName(gameName);
   if (!cleanGame) return [];
@@ -276,8 +288,8 @@ function buildRankingsCache() {
 }  
   
 const FREE_FOR_ALL_RUNNER_OVERRIDE_KEYS = new Set([
-  "2_184",
-  "9_107",
+  "2_185",
+  "9_111",
   "14_73",
   "21_70",
   "22_1"
@@ -383,6 +395,7 @@ function getUniqueMemberNames() {
   function addName(name) {
     const clean = normalizeName(name);
     if (!clean) return;
+    if (isExcludedMemberPage(clean)) return;
 
     const key = clean.toLowerCase();
 
@@ -391,22 +404,21 @@ function getUniqueMemberNames() {
     }
   }
 
-  // --- main database ---
+  // --- main database
   allRows.forEach(row => {
-    for (let i = 1; i <= 16; i++) {
+    for (let i = 1; i <= 25; i++) {
       addName(row[`RUNNER${i}`]);
-      addName(row[`COMMENTARY${i}`]);
     }
   });
   
-  // --- free for all database ---
-freeForAllExpandedRows.forEach(row => {
-  for (let i = 1; i <= 25; i++) {
-    addName(row[`RUNNER${i}`]);
-  }
-});
+  // --- free for all database
+  freeForAllExpandedRows.forEach(row => {
+    for (let i = 1; i <= 25; i++) {
+      addName(row[`RUNNER${i}`]);
+    }
+  });
 
-  // --- race database ---
+  // --- race database
   raceData.forEach(race => {
     race.runners.forEach(runner => {
       addName(runner.name);

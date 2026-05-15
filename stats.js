@@ -1824,6 +1824,7 @@ function renderConsoleLibraryCoverageChart(canvas, consoleName) {
       labels: coverage.labels,
       datasets: [{
         data: coverage.values,
+        radius: "75%",
         backgroundColor: [
           "#0072B2",
           "#E69F00",

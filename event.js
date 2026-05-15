@@ -16,8 +16,15 @@ document.addEventListener("DOMContentLoaded", () => {
   
   const EXCLUDED_EVENT_KEYS = new Set([
     // "PUT_KEY_HERE",
-    // "PUT_ANOTHER_KEY_HERE"
   ]);
+  
+  const EXCLUDED_DISPLAY_RUNNERS = new Set([
+  "dr_fatbody",
+  "eighttt",
+  "thiagoch",
+  "rodas13",
+  "rodas13_"
+]);
 
   const wrapper = document.createElement("div");
   wrapper.className = "sc-page-controls";
@@ -258,6 +265,22 @@ function buildTwitchLinksHtml(names) {
   function isExcludedEventRow(row) {
     return EXCLUDED_EVENT_KEYS.has(normalizeName(row.KEY));
   }
+  
+function normalizeHandle(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function rowHasExcludedDisplayRunner(row) {
+  for (let i = 1; i <= 10; i++) {
+    const runner = normalizeHandle(row[`RUNNER${i}`]);
+
+    if (EXCLUDED_DISPLAY_RUNNERS.has(runner)) {
+      return true;
+    }
+  }
+
+  return false;
+}  
 
 function parseTimestampToSeconds(timestamp) {
   const raw = String(timestamp || "").trim();
@@ -713,9 +736,9 @@ function renderHoraroLink(horaroUrl) {
       return;
     }
 
-    const rowsForEventId = allRows.filter(
-      row => String(row.EVENTID || "").trim() === eventId
-    );
+    const rowsForEventId = allRows
+  .filter(row => String(row.EVENTID || "").trim() === eventId)
+  .filter(row => !rowHasExcludedDisplayRunner(row));
 
     const horaroUrl = getEventHoraroUrl(rowsForEventId);
 

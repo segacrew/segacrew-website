@@ -199,11 +199,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const awesomeTitle = document.createElement("h3");
   awesomeTitle.className = "sc-gdq-column-title";
-  awesomeTitle.textContent = "AWESOME GAMES";
 
   const summerTitle = document.createElement("h3");
   summerTitle.className = "sc-gdq-column-title";
-  summerTitle.textContent = "SUMMER GAMES";
 
   headerRow.appendChild(awesomeTitle);
   headerRow.appendChild(summerTitle);
