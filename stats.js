@@ -1155,7 +1155,7 @@ function formatActiveDuration(firstDate, lastDate) {
 function getActiveDateRangeForRunner(memberName) {
   const dates = [];
 
-  // Main database only. Free For All intentionally excluded.
+  // Main database only
   databaseRows.forEach(row => {
     if (!rowIncludesRunner(row, memberName, 25)) return;
 
@@ -1325,7 +1325,7 @@ function buildConsoleLibraryCoverageData(consoleName) {
   const mainShowcased = new Set();
   const otherShowcased = new Set();
 
-  // Main database = uniquely showcased
+  // Main database 
   databaseRows.forEach(row => {
     if (normalizeConsoleForMatch(row.CONSOLE) !== selectedConsole) return;
 
@@ -1337,7 +1337,7 @@ function buildConsoleLibraryCoverageData(consoleName) {
 });
   });
 
-  // Free For All = race / special event showcase
+  // Free For All 
   freeForAllRows.forEach(row => {
     if (normalizeConsoleForMatch(row.CONSOLE) !== selectedConsole) return;
 
@@ -1349,7 +1349,7 @@ function buildConsoleLibraryCoverageData(consoleName) {
 });
   });
 
-  // Races = race / special event showcase
+  // Races
   raceData.forEach(race => {
     if (normalizeConsoleForMatch(getConsoleForRace(race)) !== selectedConsole) return;
 
