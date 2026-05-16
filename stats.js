@@ -739,16 +739,16 @@ function renderTopRunsPieChart(canvas) {
       datasets: [{
         data: values,
         backgroundColor: [
-          "#0072B2",
-          "#E69F00",
-          "#009E73",
-          "#CC79A7",
-          "#56B4E9",
-          "#D55E00",
-          "#F0E442",
-          "#7A68A6",
-          "#2A9D8F",
-          "#F4A261"
+          "#DD3D2D",
+          "#F67E4B",
+          "#FDB366",
+          "#FEDA8B",
+          "#EAECCC",
+          "#C2E4EF",
+          "#98CAE1",
+          "#6EA6CD",
+          "#4A7BB7",
+          "#364B9A"
         ],
         borderColor: "#ffffff",
         borderWidth: 2
@@ -1826,9 +1826,11 @@ function renderConsoleLibraryCoverageChart(canvas, consoleName) {
         data: coverage.values,
         radius: "75%",
         backgroundColor: [
-          "#0072B2",
-          "#E69F00",
+          "#4A7BB7",
+          "#FEDA8B",
           "#D9D9D9"
+          
+          
         ],
         borderColor: "#ffffff",
         borderWidth: 2
@@ -2124,7 +2126,7 @@ function renderActiveMembersByYearBarChart(canvas) {
       datasets: [{
         label: "Active Members",
         data: values,
-        backgroundColor: "#0072B2",
+        backgroundColor: "#4A7BB7",
         borderColor: "#083a8c",
         borderWidth: 1
       }]

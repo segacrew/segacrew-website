@@ -129,6 +129,16 @@ const TRILOGY_MAP = {
   ]
 };
 
+const MEMBER_PIE_CHART_COLORS = [
+  "#DD3D2D",
+  "#FDB366",
+  "#EAECCC",
+  "#98CAE1",
+  "#4A7BB7",
+
+];
+
+
   const wrapper = document.createElement("div");
   wrapper.className = "sc-page-controls";
 
@@ -1094,8 +1104,11 @@ function renderMostPopularGamesChart(canvas, memberName) {
     data: {
       labels,
       datasets: [{
-        data: values
-      }]
+  data: values,
+  backgroundColor: MEMBER_PIE_CHART_COLORS,
+  borderColor: "#ffffff",
+  borderWidth: 2
+}]
     },
     options: {
       responsive: true,
@@ -1130,8 +1143,11 @@ function renderMostPlayedConsolesChart(canvas, memberName) {
     data: {
       labels,
       datasets: [{
-        data: values
-      }]
+  data: values,
+  backgroundColor: MEMBER_PIE_CHART_COLORS,
+  borderColor: "#ffffff",
+  borderWidth: 2
+}]
     },
     options: {
       responsive: true,
