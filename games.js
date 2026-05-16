@@ -102,6 +102,7 @@ const EXCLUDED_DISPLAY_RUNNERS = new Set([
 
 const RACE_GAME_CONSOLE_OVERRIDES = {
   "Battle Golfer Yui": "Mega Drive",
+  "Magical Taruruto-kun": "Mega Drive",
   "Bishoujo Senshi Sailor Moon": "Mega Drive"
 };
 
