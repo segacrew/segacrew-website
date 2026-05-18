@@ -83,7 +83,7 @@ document.addEventListener("DOMContentLoaded", () => {
   "Classic Sonic Trilogy": [
     "Sonic the Hedgehog",
     "Sonic the Hedgehog 2",
-    "Sonic 3 & Knuckles"
+    "Sonic & Knuckles"
   ],
   "Valis Trilogy": [
     "Valis: The Fantasm Soldier",
