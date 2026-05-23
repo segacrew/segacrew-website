@@ -8,7 +8,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const RGL_CSV_URL = IS_LOCAL
     ? "RGL TOP 10 - RGL.csv"
-    : "https://stupendous-paletas-199024.netlify.app/RGL TOP 10 - RGL.csv";
+    : "RGL TOP 10 - RGL.csv";
 
   let rglRows = [];
   let currentCountdownRows = [];

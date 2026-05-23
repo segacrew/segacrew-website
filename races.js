@@ -10,7 +10,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const CSV_URL = IS_LOCAL
     ? "SEGA CREW RACES - MASTER.csv"
-    : "https://stupendous-paletas-199024.netlify.app/SEGA CREW RACES - MASTER.csv";
+    : "SEGA CREW RACES - MASTER.csv";
 
   const wrapper = document.createElement("div");
   wrapper.className = "sc-page-controls";

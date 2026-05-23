@@ -8,7 +8,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const GDQ_CSV_URL = IS_LOCAL
     ? "GDQ - MASTER.csv"
-    : "https://stupendous-paletas-199024.netlify.app/GDQ - MASTER.csv";
+    : "GDQ - MASTER.csv";
 
   injectGdqStyles();
 

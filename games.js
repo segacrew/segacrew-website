@@ -9,15 +9,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const CSV_URL = IS_LOCAL
     ? "sega crew database - master sheet.csv"
-    : "https://stupendous-paletas-199024.netlify.app/sega crew database - master sheet.csv";
+    : "sega crew database - master sheet.csv";
     
     const RACES_CSV_URL = IS_LOCAL
     ? "SEGA CREW RACES - MASTER.csv"
-    : "https://stupendous-paletas-199024.netlify.app/SEGA CREW RACES - MASTER.csv";
+    : "SEGA CREW RACES - MASTER.csv";
     
     const FREE_FOR_ALL_CSV_URL = IS_LOCAL
     ? "SEGA CREW FREE FOR ALL - MASTER.csv"
-    : "https://stupendous-paletas-199024.netlify.app/SEGA CREW FREE FOR ALL - MASTER.csv";  
+    : "SEGA CREW FREE FOR ALL - MASTER.csv";  
 
   let allRows = [];
   let currentGameRunRows = [];
