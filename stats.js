@@ -55,19 +55,19 @@ document.addEventListener("DOMContentLoaded", () => {
 const CSV_URLS = {
   races: IS_LOCAL
     ? "SEGA CREW RACES - MASTER.csv"
-    : "https://stupendous-paletas-199024.netlify.app/SEGA CREW RACES - MASTER.csv",
+    : "SEGA CREW RACES - MASTER.csv",
 
   freeForAll: IS_LOCAL
     ? "SEGA CREW FREE FOR ALL - MASTER.csv"
-    : "https://stupendous-paletas-199024.netlify.app/SEGA CREW FREE FOR ALL - MASTER.csv",
+    : "SEGA CREW FREE FOR ALL - MASTER.csv",
 
   database: IS_LOCAL
     ? "Sega Crew Database - Master Sheet.csv"
-    : "https://stupendous-paletas-199024.netlify.app/Sega Crew Database - Master Sheet.csv",
+    : "Sega Crew Database - Master Sheet.csv",
 
   gameLibrary: IS_LOCAL
     ? "GAME LIBRARY - MASTER.csv"
-    : "https://stupendous-paletas-199024.netlify.app/GAME LIBRARY - MASTER.csv"
+    : "GAME LIBRARY - MASTER.csv"
 };
 
 const TRILOGY_MAP = {
