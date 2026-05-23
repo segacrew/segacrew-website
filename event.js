@@ -10,9 +10,7 @@ document.addEventListener("DOMContentLoaded", () => {
   window.location.hostname === "127.0.0.1" ||
   window.location.hostname === "localhost";
 
-  const CSV_URL = IS_LOCAL
-  ? "sega crew database - master sheet.csv"
-  : "https://stupendous-paletas-199024.netlify.app/sega crew database - master sheet.csv";
+  const CSV_URL = "sega crew database - master sheet.csv";
   
   const EXCLUDED_EVENT_KEYS = new Set([
     // "PUT_KEY_HERE",
