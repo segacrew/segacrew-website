@@ -13,6 +13,8 @@ document.addEventListener("DOMContentLoaded", () => {
   let currentMemberRunIndex = -1;
   let videoDurationMap = new Map();
   let playtimeRankingData = [];
+  let playtimeReady = false;
+  let playtimeFailed = false;
   
   let rankingsCache = {
   runs: [],
@@ -2581,15 +2583,25 @@ async function renderMemberSummary(memberName) {
         <p class="sc-member-ranking-value">${escapeHtml(summary.totalRaces)}</p>
       </div>
       
-      <div class="sc-member-stat sc-member-stat-full">
+<div class="sc-member-stat sc-member-stat-full">
   <p class="sc-member-ranking-label">Total Playtime</p>
   <p class="sc-member-ranking-value">
-    ${escapeHtml(playtimeStats.totalDisplay)}
+    ${
+      !playtimeReady
+        ? "Loading..."
+        : escapeHtml(playtimeStats.totalDisplay)
+    }
   </p>
   <p class="sc-member-ranking-sub">
-    ${playtimeStats.totalSeconds > 0
-  ? `${playtimeStats.percentOfAll.toFixed(1)}% of total Sega Crew playtime (${playtimeStats.rank ? `${escapeHtml(getOrdinal(playtimeStats.rank))} out of ${escapeHtml(String(playtimeStats.totalRunners))}` : "unranked"})`
-  : "No VOD playtime available"}
+    ${
+      !playtimeReady
+        ? "Loading..."
+        : playtimeFailed
+          ? "Could not load YouTube playtime data"
+          : playtimeStats.totalSeconds > 0
+            ? `${playtimeStats.percentOfAll.toFixed(1)}% of total Sega Crew playtime (${playtimeStats.rank ? `${escapeHtml(getOrdinal(playtimeStats.rank))} out of ${escapeHtml(String(playtimeStats.totalRunners))}` : "unranked"})`
+            : "No VOD playtime available"
+    }
   </p>
 </div>
       
@@ -2938,7 +2950,7 @@ menu.appendChild(item);
     }
   });
 
-  (async function initMemberData() {
+(async function initMemberData() {
   try {
     try {
       socialsRows = await loadCsv(SOCIALS_CSV_URL);
@@ -2948,31 +2960,53 @@ menu.appendChild(item);
     }
 
     try {
-  extraRows = await loadCsv(EXTRA_CSV_URL);
-} catch (err) {
-  console.error("Papa Parse extra CSV error:", err);
-  extraRows = [];
-}
+      extraRows = await loadCsv(EXTRA_CSV_URL);
+    } catch (err) {
+      console.error("Papa Parse extra CSV error:", err);
+      extraRows = [];
+    }
 
-try {
-  freeForAllRows = await loadCsv(FREE_FOR_ALL_CSV_URL);
-  freeForAllExpandedRows = buildExpandedFreeForAllRows(freeForAllRows);
-} catch (err) {
-  console.error("Papa Parse free for all CSV error:", err);
-  freeForAllRows = [];
-  freeForAllExpandedRows = [];
-}
+    try {
+      freeForAllRows = await loadCsv(FREE_FOR_ALL_CSV_URL);
+      freeForAllExpandedRows = buildExpandedFreeForAllRows(freeForAllRows);
+    } catch (err) {
+      console.error("Papa Parse free for all CSV error:", err);
+      freeForAllRows = [];
+      freeForAllExpandedRows = [];
+    }
 
-raceData = buildRaceDatabase(extraRows);
-
+    raceData = buildRaceDatabase(extraRows);
 
     allRows = await loadCsv(CSV_URL);
     applyFreeForAllRunnerOverrides();
-    await preloadAllVideoDurations();
-    buildPlaytimeRankingData();
+
     buildRankingsCache();
-    
     handleMembersLoaded();
+
+    preloadAllVideoDurations()
+      .then(() => {
+        buildPlaytimeRankingData();
+        playtimeReady = true;
+        playtimeFailed = false;
+
+        const selectedMember = normalizeName(trigger.dataset.value);
+
+        if (selectedMember) {
+          renderMember(selectedMember);
+        }
+      })
+      .catch(err => {
+        console.error("YouTube duration preload failed:", err);
+        playtimeReady = true;
+        playtimeFailed = true;
+
+        const selectedMember = normalizeName(trigger.dataset.value);
+
+        if (selectedMember) {
+          renderMember(selectedMember);
+        }
+      });
+
   } catch (err) {
     console.error("Papa Parse member CSV error:", err);
     trigger.textContent = "Failed to load members";
