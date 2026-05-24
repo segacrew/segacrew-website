@@ -15,6 +15,9 @@ document.addEventListener("DOMContentLoaded", () => {
   let playtimeRankingData = [];
   let playtimeReady = false;
   let playtimeFailed = false;
+  let rankingsReady = false;
+  let rankingsBuildStarted = false;
+  let rankingsReadyCallbacks = [];
   
   let rankingsCache = {
   runs: [],
@@ -297,7 +300,33 @@ function buildRankingsCache() {
     diversity: buildRunDiversityRankingData(),
     timeActive: buildTimeActiveRankingData()
   };
-}  
+} 
+
+function startRankingsCacheBuild() {
+  if (rankingsBuildStarted || rankingsReady) return;
+
+  rankingsBuildStarted = true;
+
+  setTimeout(() => {
+    buildRankingsCache();
+    rankingsReady = true;
+
+    const callbacks = [...rankingsReadyCallbacks];
+    rankingsReadyCallbacks = [];
+
+    callbacks.forEach(callback => callback());
+  }, 0);
+}
+
+function whenRankingsReady(callback) {
+  if (rankingsReady) {
+    callback();
+    return;
+  }
+
+  rankingsReadyCallbacks.push(callback);
+  startRankingsCacheBuild();
+} 
   
 const FREE_FOR_ALL_RUNNER_OVERRIDE_KEYS = new Set([
   "2_185",
@@ -2067,6 +2096,18 @@ function getRankForMember(rankingData, memberName) {
 }
 
 function renderRankingsView(container, memberName) {
+  if (!rankingsReady) {
+    container.innerHTML = `
+      <p class="sc-results-message">Loading rankings...</p>
+    `;
+
+    whenRankingsReady(() => {
+      renderRankingsView(container, memberName);
+    });
+
+    return;
+  }
+
   const runsRanking = rankingsCache.runs;
   const uniqueGamesRanking = rankingsCache.uniqueGames;
   const eventsRanking = rankingsCache.events;
@@ -3013,12 +3054,11 @@ menu.appendChild(item);
     allRows = await loadCsv(CSV_URL);
     applyFreeForAllRunnerOverrides();
 
-    buildRankingsCache();
     handleMembersLoaded();
 
     setTimeout(() => {
       startPlaytimePreload();
-    }, 5000);
+    }, 100);
 
   } catch (err) {
     console.error("Papa Parse member CSV error:", err);
