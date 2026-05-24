@@ -1378,6 +1378,38 @@ function chunkArray(items, size) {
   return chunks;
 }
 
+let playtimePreloadStarted = false;
+
+function startPlaytimePreload() {
+  if (playtimePreloadStarted || playtimeReady) return;
+
+  playtimePreloadStarted = true;
+
+  preloadAllVideoDurations()
+    .then(() => {
+      buildPlaytimeRankingData();
+      playtimeReady = true;
+      playtimeFailed = false;
+
+      const selectedMember = normalizeName(trigger.dataset.value);
+
+      if (selectedMember) {
+        renderMember(selectedMember);
+      }
+    })
+    .catch(err => {
+      console.error("YouTube duration preload failed:", err);
+      playtimeReady = true;
+      playtimeFailed = true;
+
+      const selectedMember = normalizeName(trigger.dataset.value);
+
+      if (selectedMember) {
+        renderMember(selectedMember);
+      }
+    });
+}
+
 async function preloadAllVideoDurations() {
   const ids = new Set();
 
@@ -2527,9 +2559,10 @@ function getCommentaryRaceRows(memberName) {
       _isRaceDerived: true,
       _race: race,
       ...Object.fromEntries(
-        race.runners.flatMap((runner, index) => ([
-          [`RUNNER${index + 1}`, runner.name]
-        ]))
+        race.runners.map((runner, index) => [
+          `RUNNER${index + 1}`,
+          runner.name
+        ])
       ),
       ...Object.fromEntries(
         Array.from({ length: 21 }, (_, index) => {
@@ -2983,29 +3016,9 @@ menu.appendChild(item);
     buildRankingsCache();
     handleMembersLoaded();
 
-    preloadAllVideoDurations()
-      .then(() => {
-        buildPlaytimeRankingData();
-        playtimeReady = true;
-        playtimeFailed = false;
-
-        const selectedMember = normalizeName(trigger.dataset.value);
-
-        if (selectedMember) {
-          renderMember(selectedMember);
-        }
-      })
-      .catch(err => {
-        console.error("YouTube duration preload failed:", err);
-        playtimeReady = true;
-        playtimeFailed = true;
-
-        const selectedMember = normalizeName(trigger.dataset.value);
-
-        if (selectedMember) {
-          renderMember(selectedMember);
-        }
-      });
+    setTimeout(() => {
+      startPlaytimePreload();
+    }, 5000);
 
   } catch (err) {
     console.error("Papa Parse member CSV error:", err);
