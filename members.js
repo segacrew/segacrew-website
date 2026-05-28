@@ -168,12 +168,33 @@ const MEMBER_PIE_CHART_COLORS = [
   
   let memberTypeSearch = "";
   let memberTypeSearchTimer = null;
+  let memberSearchNames = [];
 
   dropdown.appendChild(trigger);
   dropdown.appendChild(menu);
-  wrapper.appendChild(label);
-  wrapper.appendChild(dropdown);
-  controls.appendChild(wrapper);
+
+const searchWrap = document.createElement("div");
+searchWrap.className = "sc-member-search-wrap";
+
+const searchInput = document.createElement("input");
+searchInput.type = "search";
+searchInput.className = "sc-member-search-input";
+searchInput.placeholder = "Search runners...";
+searchInput.setAttribute("autocomplete", "off");
+searchInput.setAttribute("aria-label", "Search runners");
+searchInput.disabled = true;
+
+const searchResults = document.createElement("div");
+searchResults.className = "sc-member-search-results";
+searchResults.setAttribute("role", "listbox");
+
+searchWrap.appendChild(searchInput);
+searchWrap.appendChild(searchResults);
+
+wrapper.appendChild(label);
+wrapper.appendChild(searchWrap);
+wrapper.appendChild(dropdown);
+controls.appendChild(wrapper);
 
   
 const modal = document.createElement("div");
@@ -215,6 +236,53 @@ const nextBtn = modal.querySelector(".sc-modal-next");
   requestAnimationFrame(() => {
     scrollSelectedMemberIntoView();
   });
+}
+
+function closeSearchResults() {
+  searchResults.classList.remove("open");
+  searchResults.innerHTML = "";
+}
+
+function renderMemberSearchResults(query) {
+  const cleanQuery = normalizeName(query).toLowerCase();
+
+  searchResults.innerHTML = "";
+
+  if (!cleanQuery) {
+    closeSearchResults();
+    return;
+  }
+
+  const matches = memberSearchNames
+    .filter(name => normalizeName(name).toLowerCase().includes(cleanQuery))
+    .slice(0, 12);
+
+  if (!matches.length) {
+    const empty = document.createElement("div");
+    empty.className = "sc-member-search-empty";
+    empty.textContent = "No matching runners";
+    searchResults.appendChild(empty);
+    searchResults.classList.add("open");
+    return;
+  }
+
+  matches.forEach(name => {
+    const item = document.createElement("button");
+    item.type = "button";
+    item.className = "sc-member-search-result";
+    item.textContent = name;
+    item.dataset.value = name;
+
+    item.addEventListener("click", () => {
+      searchInput.value = name;
+      closeSearchResults();
+      setSelected(name);
+    });
+
+    searchResults.appendChild(item);
+  });
+
+  searchResults.classList.add("open");
 }
   
   function scrollSelectedMemberIntoView() {
@@ -2957,14 +3025,23 @@ window.debugRacePlacementsForRunner = function(memberName) {
 
 
   function setSelected(name) {
-    trigger.textContent = name || "Select a member";
-    trigger.dataset.value = name || "";
-    closeMenu();
-    renderMember(name);
+  trigger.textContent = name || "Select a member";
+  trigger.dataset.value = name || "";
+
+  if (searchInput) {
+    searchInput.value = name || "";
   }
+
+  closeMenu();
+  closeSearchResults();
+  renderMember(name);
+}
   
   function handleMembersLoaded() {
     const uniqueMembers = getUniqueMemberNames();
+    
+    memberSearchNames = uniqueMembers;
+    searchInput.disabled = false;
 
     menu.innerHTML = "";
     trigger.textContent = "Select a member";
@@ -3018,11 +3095,43 @@ menu.appendChild(item);
   scrollMemberMatchIntoView(memberTypeSearch);
 });
 
-  document.addEventListener("click", (e) => {
-    if (!dropdown.contains(e.target)) {
-      closeMenu();
+searchInput.addEventListener("input", () => {
+  renderMemberSearchResults(searchInput.value);
+});
+
+searchInput.addEventListener("focus", () => {
+  if (searchInput.value.trim()) {
+    renderMemberSearchResults(searchInput.value);
+  }
+});
+
+searchInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    const firstResult = searchResults.querySelector(".sc-member-search-result");
+    if (firstResult) {
+      e.preventDefault();
+      const name = firstResult.dataset.value;
+      searchInput.value = name;
+      closeSearchResults();
+      setSelected(name);
     }
-  });
+  }
+
+  if (e.key === "Escape") {
+    closeSearchResults();
+    searchInput.blur();
+  }
+});
+
+  document.addEventListener("click", (e) => {
+  if (!dropdown.contains(e.target)) {
+    closeMenu();
+  }
+
+  if (!searchWrap.contains(e.target)) {
+    closeSearchResults();
+  }
+});
 
 (async function initMemberData() {
   try {
