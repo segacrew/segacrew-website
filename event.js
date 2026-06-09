@@ -86,6 +86,7 @@ document.addEventListener("DOMContentLoaded", () => {
   "30": "images/SW6logo.png",
   "31": "images/segalympics_2026_logo.png",
   "32": "images/Master_System_Mania.png",
+  "33": "images/ST8_Logo.png",
 };
   
 
