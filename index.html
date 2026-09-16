@@ -409,11 +409,23 @@
 </header>
 
   <section class="sc-hero">
+
+  <video
+    id="scHeroVideo"
+    class="sc-hero-video"
+    autoplay
+    muted
+    loop
+    playsinline
+    preload="auto">
+  </video>
+
   <script>
     const DEFAULT_BANNER = "bannervid_zoom.mov";
     const ALT_BANNER = "bannermov2.mov";
 
     const today = new Date();
+
     const isAprilFools =
       today.getMonth() === 3 &&
       today.getDate() === 1;
@@ -422,13 +434,12 @@
       isAprilFools || Math.random() < 0.03
         ? ALT_BANNER
         : DEFAULT_BANNER;
-  </script>
 
-  <video class="sc-hero-video" autoplay muted loop playsinline>
-    <script>
-      document.write(`<source src="${selectedBanner}" type="video/mp4">`);
-    </script>
-  </video>
+    const heroVideo = document.getElementById("scHeroVideo");
+
+    heroVideo.src = selectedBanner;
+    heroVideo.load();
+  </script>
 
   <div class="sc-hero-overlay">
     <div class="sc-hero-content">
@@ -456,7 +467,7 @@
 
     <div class="sc-meta">
       <div class="sc-pill">
-        Upcoming Event: MASTER SYSTEM MANIA (September 5-6 2026)
+        Upcoming Event: SEGAWEEN PART 7 (October 30 - November 1 2026)
       </div>
 
       <div class="sc-social-icons">
