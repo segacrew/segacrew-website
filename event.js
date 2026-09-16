@@ -88,6 +88,7 @@ document.addEventListener("DOMContentLoaded", () => {
   "32": "images/Master_System_Mania.png",
   "33": "images/ST8_Logo.png",
   "34": "images/faustathon2_logo.png",
+  "35": "images/Master_System_Mania.png",
 };
   
 
