@@ -913,6 +913,314 @@
 .sc-race-info-line a:hover{
   text-decoration:underline;
 }
+
+.sc-race-mode-buttons{
+  display:flex;
+  justify-content:center;
+  gap:12px;
+  flex-wrap:wrap;
+  width:100%;
+  margin-bottom:28px;
+}
+
+.sc-race-mode-button{
+  border:1px solid #c9d8ec;
+  background:#ffffff;
+  color:var(--sega-blue-dark);
+  border-radius:999px;
+  padding:12px 18px;
+  font-family:Arial, Helvetica, sans-serif;
+  font-size:0.98rem;
+  font-weight:800;
+  cursor:pointer;
+  box-shadow:0 6px 18px rgba(0,0,0,0.06);
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.15s ease,
+    box-shadow 0.2s ease;
+}
+
+.sc-race-mode-button:hover{
+  border-color:#a9c3e7;
+  box-shadow:0 8px 22px rgba(0,0,0,0.08);
+  transform:translateY(-1px);
+}
+
+.sc-race-mode-button.active{
+  background:var(--sega-blue-dark);
+  color:#ffffff;
+  border-color:var(--sega-blue-dark);
+}
+
+@media (max-width: 900px){
+  .sc-race-mode-buttons{
+    flex-direction:column;
+    align-items:stretch;
+  }
+
+  .sc-race-mode-button{
+    width:100%;
+  }
+}
+
+.sc-race-info-date{
+  margin-top:-2px;
+  margin-bottom:18px;
+  color:var(--muted);
+  font-size:0.95rem;
+  font-weight:600;
+}
+
+.sc-race-info-tab-buttons{
+  display:flex;
+  justify-content:center;
+  gap:10px;
+  flex-wrap:wrap;
+  width:100%;
+  margin-top:18px;
+  margin-bottom:28px;
+}
+
+.sc-race-info-tab-button{
+  border:1px solid #c9d8ec;
+  background:#ffffff;
+  color:var(--sega-blue-dark);
+  border-radius:999px;
+  padding:9px 14px;
+  font-family:Arial, Helvetica, sans-serif;
+  font-size:0.88rem;
+  font-weight:800;
+  cursor:pointer;
+  box-shadow:0 4px 12px rgba(0,0,0,0.05);
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.15s ease,
+    box-shadow 0.2s ease;
+}
+
+.sc-race-info-tab-button:hover{
+  border-color:#a9c3e7;
+  box-shadow:0 6px 16px rgba(0,0,0,0.08);
+  transform:translateY(-1px);
+}
+
+.sc-race-info-tab-button.active{
+  background:var(--sega-blue-dark);
+  color:#ffffff;
+  border-color:var(--sega-blue-dark);
+}
+
+.sc-race-info-content{
+  margin-top:8px;
+}
+
+.sc-race-rules-image-wrap{
+  margin:10px auto 0;
+  display:flex;
+  justify-content:center;
+}
+
+.sc-race-rules-image{
+  display:block;
+  max-width:100%;
+  height:auto;
+  border-radius:14px;
+}
+
+.sc-race-path-map-wrap{
+  margin:10px auto 0;
+  display:flex;
+  justify-content:center;
+}
+
+.sc-race-path-map-image{
+  display:block;
+  max-width:100%;
+  height:auto;
+  border-radius:14px;
+}
+
+.sc-detailed-goals{
+  width:100%;
+  max-width:1000px;
+  margin:0 auto;
+  border:1px solid var(--border);
+  border-radius:14px;
+  overflow:hidden;
+  background:#fff;
+  box-shadow:0 6px 18px rgba(0,0,0,0.06);
+}
+
+.sc-detailed-goal-item + .sc-detailed-goal-item{
+  border-top:1px solid #e7edf5;
+}
+
+.sc-detailed-goal-header{
+  width:100%;
+  border:none;
+  background:#f8fbff;
+  color:var(--sega-blue-dark);
+  padding:14px 18px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  font-family:Arial, Helvetica, sans-serif;
+  font-size:1rem;
+  font-weight:800;
+  text-align:left;
+  cursor:pointer;
+  transition:background 0.2s ease;
+}
+
+.sc-detailed-goal-header:hover{
+  background:#eef4ff;
+}
+
+.sc-detailed-goal-arrow{
+  width:10px;
+  height:10px;
+  flex:0 0 10px;
+  border-right:2px solid var(--sega-blue);
+  border-bottom:2px solid var(--sega-blue);
+  transform:rotate(45deg);
+  transition:transform 0.2s ease;
+}
+
+.sc-detailed-goal-item.open .sc-detailed-goal-arrow{
+  transform:rotate(-135deg);
+}
+
+.sc-detailed-goal-body{
+  display:none;
+  padding:20px;
+  text-align:left;
+  background:#fff;
+}
+
+.sc-detailed-goal-item.open .sc-detailed-goal-body{
+  display:block;
+}
+
+.sc-detailed-goal-summary{
+  margin-bottom:24px;
+}
+
+.sc-detailed-goal-line{
+  line-height:1.6;
+}
+
+.sc-detailed-goal-line + .sc-detailed-goal-line{
+  margin-top:8px;
+}
+
+.sc-detailed-goal-label{
+  font-weight:800;
+  color:var(--sega-blue-dark);
+  margin-right:5px;
+}
+
+.sc-detailed-goal-timing{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:28px;
+  align-items:start;
+}
+
+.sc-detailed-goal-timing-column{
+  text-align:left;
+}
+
+.sc-detailed-goal-timing-title{
+  margin-bottom:8px;
+  font-size:1rem;
+  font-weight:800;
+  color:var(--sega-blue-dark);
+}
+
+.sc-detailed-goal-timing-text{
+  line-height:1.6;
+  margin-bottom:14px;
+}
+
+.sc-detailed-goal-image{
+  display:block;
+  width:80%;
+  max-width:100%;
+  height:auto;
+  border-radius:10px;
+  border:1px solid var(--border);
+}
+
+@media (max-width: 900px){
+  .sc-detailed-goal-timing{
+    grid-template-columns:1fr;
+    gap:22px;
+  }
+
+  .sc-detailed-goal-image{
+    width:70%;
+  }
+}
+
+.sc-detailed-goal-option + .sc-detailed-goal-option{
+  margin-top:28px;
+  padding-top:28px;
+  border-top:2px solid #e7edf5;
+}
+
+.sc-detailed-goal-option-title{
+  margin-bottom:16px;
+  font-size:1.05rem;
+  font-weight:800;
+  color:var(--sega-blue-dark);
+}
+
+.sc-detailed-goal-additional-info{
+  margin-top:8px;
+}
+
+.sc-race-resources{
+  width:100%;
+  max-width:700px;
+  margin:0 auto;
+  padding:20px 24px;
+  background:#ffffff;
+  border:1px solid var(--border);
+  border-radius:14px;
+  box-shadow:0 6px 18px rgba(0,0,0,0.06);
+  text-align:left;
+}
+
+.sc-race-resource-line{
+  font-size:1rem;
+  line-height:1.6;
+}
+
+.sc-race-resource-line + .sc-race-resource-line{
+  margin-top:12px;
+}
+
+.sc-race-resource-label{
+  font-weight:800;
+  color:var(--sega-blue-dark);
+  margin-right:5px;
+}
+
+.sc-race-resource-line a{
+  color:var(--sega-blue);
+  text-decoration:none;
+  font-weight:800;
+}
+
+.sc-race-resource-line a:hover{
+  color:var(--sega-blue-dark);
+  text-decoration:underline;
+}
   
 </style>
 
