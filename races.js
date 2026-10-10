@@ -15,7 +15,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const RACE_INFORMATION = {
   "Sega 8 #7": {
     title: "Sega 8 #7",
-    date: "October 11, 2026",
+    date: "November 21, 2026",
 
     raceRulesImage:
       "images/Sega8_7_GameList.png",
@@ -25,7 +25,7 @@ document.addEventListener("DOMContentLoaded", () => {
       
      resources: {
       romPackUrl: "https://discord.com/channels/570798335997247510/590703739481096212/1558523536937717760",
-      timeSheetUrl: "",
+      timeSheetUrl: "https://docs.google.com/spreadsheets/d/1DAz4z-ykSG56r2hYeI5k3zSJh6DKJ8SGzTPYciN9VZs",
       gameRevealUrl: "https://www.twitch.tv/videos/2896984034",
       speedrunArchiveUrl: "https://www.speedrun.com/Multiple_Genesis_Games?h=mega-16-sega-16-sega8-2026-list-announced-11am-edt-saturday-10-october-click-website"
   },  
